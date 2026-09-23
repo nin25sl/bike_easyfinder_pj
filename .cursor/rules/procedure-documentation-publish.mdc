@@ -1,0 +1,350 @@
+---
+description: ドキュメント化・手順書化を依頼されたとき、/docs フォルダ管理と Procedure API（get-file / publish-post / create-folder）を使って新規投稿・更新する汎用ルール
+alwaysApply: true
+---
+
+# ドキュメント化依頼 → /docs 管理 + Procedure API 投稿/更新
+
+## いつ適用するか
+
+ユーザーが次のような依頼をしたとき**のみ**適用する。
+
+- 手順書・運用手順・設計メモ・ナレッジの**ドキュメント化**
+- 「サイトに載せたい」「procedure に出したい」「公開／下書きで保存」など**外部サイトへの反映**が含まれる依頼
+- `/docs` 内のファイルを**編集**してほしい（→ Procedure API も同期更新）
+- 本文に画像がある文書の公開・更新（→ **`upload-asset-image` を本文より先に完了**。省略禁止）
+
+依頼が「このリポジトリ内の README だけ直して」など**ローカルファイル編集のみ**なら、本ルールの API 投稿は不要。
+
+---
+
+## プロジェクト名（`{PJ名}`）の決め方
+
+AIは以下の優先順でプロジェクト名を決定する。
+
+1. ワークスペースルートの `package.json` の `name` フィールドを読む
+2. `package.json` が無い場合はルートディレクトリ名を使う
+3. どちらも判断できない場合はユーザーに確認する
+
+> `{PJ名}` はローカル `/docs` フォルダ階層と Procedure API の `targetFolder` の両方で使う基準になる。
+
+---
+
+## ファイル作成時の言語
+
+- ファイル名は英語（kebab-case 推奨）
+- frontmatter の `title`・`description`、および本文は**日本語**で記載する
+- タグ（`tags`）は既存記事に合わせて英語の短い識別子でよい（例: `lancers`, `config`）。新規に日本語タグを使う場合はプロジェクト内で統一する
+- ユーザーが言語を明示した場合はその指定に従う
+- 既存ファイルを更新する場合も、追記・修正部分は日本語で記述する
+
+---
+
+## `/docs` フォルダ構造
+
+ワークスペースルートに以下の構造を維持する。
+
+```
+docs/
+└── {PJ名}/
+    ├── Memo/
+    ├── ModifyHistory/
+    ├── Procedure/
+    └── SystemDesign/
+```
+
+- `docs/` 直下にはプロジェクトフォルダのみ置く（ファイルを直置きしない）
+- 初回利用時: 上記ディレクトリ構造が存在しなければ作成する
+- サブフォルダの指定がない場合は、推測で決めずユーザーに確認する
+
+---
+
+## API エンドポイント一覧
+
+ベース URL は `PUBLIC_API_BASE_URL` 環境変数（例: `https://api.procedure.example.com`）または `.env` の値を使う。**URL をルールにハードコードしない。**
+
+| メソッド | パス | 用途 |
+|----------|------|------|
+| `GET` | `/api/list-files` | ファイル一覧取得・filename から path 解決 |
+| `POST` | `/api/get-file` | 既存 Markdown と SHA の取得 |
+| `POST` | `/api/publish-post` | 新規投稿・既存更新 |
+| `POST` | `/api/create-folder` | Procedure API 上にフォルダ作成 |
+| `POST` | `/api/upload-asset-image` | ドキュメント用画像を GitHub の `src/assets/images/{documentKey}/` へ保存（**Lambda のみ**。Astro リポジトリには `src/pages/api/upload-asset-image` を置かない） |
+
+認証ヘッダー（全エンドポイント共通）:
+```
+X-Procedure-Token: <PROCEDURE_TOKEN>
+```
+シークレットはサーバ側環境変数のみで扱う。**チャットやコードに書き戻さない。**
+
+---
+
+## ドキュメント画像（`upload-asset-image`）
+
+呼び出しは **`PUBLIC_API_BASE_URL`（Lambda / API Gateway）** に対して行う。フロント（procedure-site）や Astro の `src/pages/api/*` には同名ルートを置かない。
+
+### 保存パス（リポジトリ上）
+
+- ベース: `src/assets/images/{documentKey}/{filename}`
+- **`documentKey`**: 対象 Markdown のファイル名から拡張子を除いたもの（例: `lambda-api-setup`）と `publish-post` の `filename` を揃えると運用しやすい。英数字・`.` `_` `-` で最大 200 文字程度（先頭は英数字）。
+- **許可拡張子**: `png` `jpg` `jpeg` `gif` `webp` `svg`
+- **最大サイズ**: 10MB／枚（サーバ実装の定数）
+- **ブランチ**: `publish-post` と同様、`GITHUB_BRANCH`（既定 `main`）と `GITHUB_PROCEDURE_BRANCH`（既定 `procedure-site`）の**両方**に同じファイルをコミットする。
+
+### Markdown での参照（サイト表示用）
+
+本文では次の形式のみを使う（`rehype-figure` が `src/assets/...` に解決する）。
+
+```markdown
+![](assets/images/{documentKey}/{filename})
+```
+
+成功レスポンスの `data.markdownImage` に同じ文字列が入るので、それをそのまま貼ってよい。
+
+### `POST /api/upload-asset-image`（Lambda 実装）
+
+手順書 [`lambda-api-setup.md`](src/content/posts/management/MyWebSite/Procedure/lambda-api-setup.md) の Lambda サンプルは **`application/json` のみ**（`contentBase64` 必須）。`multipart/form-data` は実装していない。
+
+- **`application/json`**
+  - `documentKey`（必須）
+  - `filename`（必須）
+  - `contentBase64`（必須・画像の Base64）
+  - `sha`（任意・上書き時は必須（primary ブランチ上の blob SHA））
+  - `branch`（任意・既定は Lambda の `GITHUB_BRANCH`）
+
+### レスポンス（成功時）
+
+- `data.path`: 例 `src/assets/images/lambda-api-setup/diagram.png`
+- `data.sha`: 次回上書き用（primary ブランチ）
+- `data.markdownImage`: 上記 Markdown 1 行
+- `data.isUpdate`: 上書きかどうか
+
+### エラー時
+
+- 同名ファイルが primary に既にあるのに `sha` なし → `409`
+- `sha` があるがファイルがない → `404`
+- GitHub の SHA 不一致 → `409`（`get-file` 相当で再取得してから再送）
+
+### 環境変数（サーバ）
+
+- 固定トークンを使う場合: Lambda に **`PROCEDURE_TOKEN`** を設定すると、**未設定時はスキップ**し、設定時は **`X-Procedure-Token` が一致しないリクエストを拒否**する。
+
+### エージェント必須：画像がある文書は Upload してから本文投稿
+
+`publish-post` は Markdown だけを GitHub に書く。**画像ファイルは自動では付かない。** 本文に `![...](...)` があるのに `upload-asset-image` を省略すると、Amplify の Astro ビルドが `ImageNotFound` で落ちる。
+
+本文投稿・更新の依頼では、次を **この順で** 行う。飛ばしたら未完了。
+
+1. 本文の画像参照と、ローカル実ファイルを突き合わせる  
+   - よくある場所: `docs/{PJ名}/{subfolder}/images/{documentKey}/` または MD と同じフォルダ  
+   - `{documentKey}` = 対象 MD のファイル名から拡張子を除いたもの（例: `growth-board-operations.md` → `growth-board-operations`）
+2. 各画像を `POST /api/upload-asset-image` する。`filename` は **ファイル名だけ**（`images/foo/bar.png` のような相対パスは送らない）
+3. 409（既存・SHA なし）で **中身を差し替えない** なら、その画像は既に GitHub にあるのでスキップしてよい  
+   - 差し替えるときだけ `sha` が必要。`get-file` は `src/content/posts/` の Markdown 専用で、`src/assets/images/` は **400 / code 2001（許可されていないパス）** になることがある  
+   - 上書き用 SHA は GitHub Contents API か、アップロード API の前回 `data.sha` を使う
+4. ローカル MD の画像 URL を **すべて** `![説明](assets/images/{documentKey}/{filename})` にする。相対 `images/...` は禁止（Astro が `ImageNotFound` でビルド落ちする。実ファイルが `src/assets/images/` にあっても、参照が `images/` だと別物として解決される）
+5. **未アップロードの画像が 200 になってから**（既存 409 スキップ分を含む）`publish-post` する
+6. `list-files` は応答しない（読取タイムアウト）ことがある。そのときはスキップし、既知の `src/content/posts/management/{PJ名}/{subfolder}/filename.md` で `get-file` する
+
+ローカルの実ファイルは `docs/.../images/{documentKey}/` に置いてよい。サイト用の Markdown 参照だけ `assets/images/...` にする。
+
+---
+
+## `targetFolder` マッピング規則
+
+| ローカルパス（`/docs` 以下） | Procedure API `targetFolder` |
+|-----------------------------|------------------------------|
+| `docs/{PJ名}/Procedure/file.md` | `management/{PJ名}/Procedure` |
+| `docs/{PJ名}/SystemDesign/file.md` | `management/{PJ名}/SystemDesign` |
+| `docs/{PJ名}/Memo/file.md` | `management/{PJ名}/Memo` |
+| `docs/{PJ名}/ModifyHistory/file.md` | `management/{PJ名}/ModifyHistory` |
+
+- `targetFolder` を明示した場合、category によるサブフォルダは追加されない（そのフォルダ直下へ保存）
+- 存在しないフォルダを前提に送らない（→ 下記「フォルダ作成フロー」参照）
+
+---
+
+## 新規ファイル作成フロー
+
+ユーザーから「`docs` 内に新しい MD を作って」「Procedure API に投稿して」と依頼されたとき。
+
+### 手順
+
+1. **`{PJ名}` と保存先サブフォルダを確認**
+   - 不明な場合はユーザーに確認する
+2. **テンプレ確認**（任意・テンプレが存在する場合）
+   - `documentation-templates.mdc` を参照し、該当テンプレを読んでから本文を組み立てる
+   - テンプレが見つからない・用途が曖昧な場合は推測で組み立てずユーザーへ確認する
+3. **ローカルにファイルを作成**
+   - パス: `docs/{PJ名}/{subfolder}/filename.md`
+   - 画像を置くなら `docs/{PJ名}/{subfolder}/images/{documentKey}/`。本文の参照は最初から `assets/images/{documentKey}/{filename}` にする
+3.5. **画像があれば先に Upload**（「エージェント必須：画像がある文書は Upload してから本文投稿」）
+   - 画像参照があるのにこのステップを飛ばして手順 4 へ進んではいけない
+4. **Procedure API へ投稿**
+   - `POST /api/publish-post` に以下を送る
+
+```json
+{
+  "frontmatter": {
+    "title": "記事タイトル",
+    "published": "YYYY-MM-DD",
+    "updated": "YYYY-MM-DD",
+    "description": "説明",
+    "tags": ["タグ"],
+    "category": "サブフォルダ名",
+    "draft": false
+  },
+  "content": "本文 Markdown のみ（frontmatter を含めない）",
+  "targetSite": "procedure",
+  "targetFolder": "{PJ名}/{subfolder}"
+}
+```
+
+- 新規投稿: `updated` は省略可（省略時は API が `published` と同じ日付を書き出す）。明示する場合も `YYYY-MM-DD`。
+
+5. **400「フォルダが存在しません」の場合 → フォルダを作成してリトライ**
+   - `POST /api/create-folder` でフォルダを作成する（下記参照）
+   - 成功後、手順 4 を再実行する
+6. **成功時**
+   - レスポンスの `data.path` と `data.sha` をユーザーに伝える
+   - 次回更新のため **`sha` を控える**
+
+---
+
+## `POST /api/create-folder` の使い方
+
+Procedure API 上にフォルダが存在しないとき（400 エラー）に呼び出す。
+
+### リクエスト
+
+```json
+{
+  "folderPath": "{PJ名}/Procedure"
+}
+```
+
+- `folderPath`: `src/content/posts/` 以降の相対パス
+
+### 成功レスポンス
+
+```json
+{
+  "success": true,
+  "data": {
+    "path": "{PJ名}/Procedure",
+    "fullPath": "src/content/posts/{PJ名}/Procedure"
+  }
+}
+```
+
+### 注意
+
+- フォルダ作成後は必ず `publish-post` を再実行する
+- 400（バリデーション）・409（既存フォルダ）の場合は推測で再送せずユーザーに確認する
+
+---
+
+## `/docs` ファイル編集フロー
+
+ユーザーから「`docs` 内の〇〇を編集して」と依頼されたとき。
+
+### 手順
+
+1. **ローカルファイルを編集する**
+   - 画像の追加・差し替え・パス変更がある場合は、手順 5 の前に `upload-asset-image` を完了させる（相対 `images/` のまま投稿しない）
+2. **`originalPath` の特定**
+   - `docs/{PJ名}/{subfolder}/filename.md` の `filename.md` がわかっている場合:
+     ```
+     GET /api/list-files?type=all&filename=filename.md
+     ```
+     - 候補が 1 件ならその `path` を採用
+     - 候補が複数件なら**ユーザーに選ばせる**
+   - `originalPath` が明示されている場合はそのまま使う
+3. **既存 SHA の取得**
+   - `POST /api/get-file` に `path = originalPath` を送る
+   - `frontmatter` / `content` / `sha` を受け取る
+4. **更新内容を反映**
+   - 本文のみの更新なら frontmatter は原則維持する
+   - タイトル・説明・タグ・公開日の変更がある場合のみ該当フィールドを更新する
+   - **既存記事の更新（`originalPath` あり）では `updated`（YYYY-MM-DD）が必須**（最終更新日）
+   - `content` は frontmatter を含めず本文だけを送る
+5. **Procedure API へ更新投稿**
+   - `targetFolder` は `originalPath` の親ディレクトリから算出する
+     - 例: `originalPath = src/content/posts/MyApp/Procedure/foo.md` → `targetFolder = MyApp/Procedure`
+
+```json
+{
+  "frontmatter": {
+    "title": "...",
+    "published": "YYYY-MM-DD",
+    "updated": "YYYY-MM-DD",
+    "draft": false
+  },
+  "content": "更新後の本文...",
+  "targetSite": "procedure",
+  "targetFolder": "{PJ名}/{subfolder}",
+  "originalPath": "src/content/posts/{PJ名}/{subfolder}/filename.md",
+  "sha": "取得した SHA"
+}
+```
+
+6. **成功時**
+   - 新しい `data.path` と `data.sha` をユーザーに伝える
+
+---
+
+## `GET /api/list-files` の使い方
+
+```
+GET /api/list-files?type=all&filename=example.md
+```
+
+- 成功時は `data.matches` に候補一覧が入る
+- 候補が 1 件ならその `path` を採用する
+- 候補が複数件なら**必ずユーザーに候補 path を選ばせる**
+- **20 秒以上応答が無い／タイムアウトしたら諦めない。** `list-files` を繰り返さず、`src/content/posts/management/{PJ名}/{subfolder}/filename.md` で `get-file` する
+
+---
+
+## `POST /api/get-file` の使い方
+
+### リクエスト
+
+```json
+{
+  "path": "src/content/posts/{PJ名}/{subfolder}/example.md"
+}
+```
+
+### 成功レスポンス
+
+```json
+{
+  "path": "src/content/posts/{PJ名}/{subfolder}/example.md",
+  "frontmatter": { "title": "...", "published": "YYYY-MM-DD", "draft": false },
+  "content": "本文...",
+  "sha": "abc123def456"
+}
+```
+
+- **ファイル名だけでは `get-file` を呼ばない**。まず `list-files?filename=...` で候補 path を取得する
+
+---
+
+## エラー時の扱い
+
+| ステータス | 対処 |
+|------------|------|
+| `400` フォルダ不存在 | `POST /api/create-folder` でフォルダ作成 → `publish-post` を再実行 |
+| `400` その他入力不足・パス不正 | 推測で再送せずユーザーに不足情報を確認する |
+| `404` ファイル未検出 | `originalPath` の誤りをユーザーに確認する |
+| `409 / code 3003` SHA 不一致 | `get-file` を再実行して最新 SHA を取り直してから再投稿する |
+
+---
+
+## 他ワークスペースへ持ち出すときの注意
+
+- **ベース URL**: `PUBLIC_API_BASE_URL` など環境変数で管理し、このルールにハードコードしない
+- **テンプレ参照パス**: `documentation-templates.mdc` が参照するテンプレの実体パスを、持ち先リポジトリの構造に合わせて書き換える
+- **`{PJ名}`**: 持ち先の `package.json` の `name` またはルートディレクトリ名が自動で使われる
+- **`docs/` 構造**: 持ち先ワークスペースルートに `docs/{PJ名}/{Memo,ModifyHistory,Procedure,SystemDesign}/` が無ければ初回作成する

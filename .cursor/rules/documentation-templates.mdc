@@ -1,0 +1,32 @@
+---
+description: 管理系 Markdown 新規作成・改修時に、テンプレの参照先と用途だけを揃える（本文は各テンプレファイルが正）
+globs:
+  - src/content/posts/management/**/*.md
+alwaysApply: false
+---
+
+## 単一の正（Single source of truth）
+
+テンプレの**本文はこのルールに書かない**。必ず次のファイルを読み、必要ならコピーして新規ファイルを作る。
+
+| 用途 | 参照するテンプレ（リポジトリルートからのパス） |
+|------|-----------------------------------------------|
+| システム計画 | [src/content/posts/management/Template/system_planning_template.md](src/content/posts/management/Template/system_planning_template.md) |
+| システム設計 | [src/content/posts/management/Template/system_design_template.md](src/content/posts/management/Template/system_design_template.md) |
+| システム改修・変更履歴 | [src/content/posts/management/Template/system_modification_template.md](src/content/posts/management/Template/system_modification_template.md) |
+| 手順書 | [src/content/posts/management/Template/procedure_template.md](src/content/posts/management/Template/procedure_template.md) |
+| 分類しにくいメモ | [src/content/posts/management/Template/other_template.md](src/content/posts/management/Template/other_template.md) |
+| ドキュメントのよくある弱点チェック | [src/content/posts/management/Template/documentation_pitfalls.md](src/content/posts/management/Template/documentation_pitfalls.md) |
+| 年間計画 | [src/content/posts/management/Template/annual_plan_template.md](src/content/posts/management/Template/annual_plan_template.md) |
+| 日次 Todo | [src/content/posts/management/Template/todo_daily_template.md](src/content/posts/management/Template/todo_daily_template.md) |
+
+## 作業時のルール
+
+- 新規 MD を作るときは、上表の**該当テンプレを `@` で読み込んでから**骨子を埋める。
+- **目的**は Why、**ゴール**は Done 条件（テンプレ内のブロッククォート参照）。
+- フロントマターは [src/content/config.ts](src/content/config.ts) の `posts` スキーマに合わせる（`title`, `published`, `updated`（任意）, `description`, `tags`, `category`, `draft` 等）。
+- 目次はテンプレどおり `## 目次` の直後に `<inline-toc preview="3"></inline-toc>` を置く。
+
+## 別リポジトリへ持ち出すとき
+
+テンプレ全文のコピーではなく、`Template/` 一式の同期（subtree / submodule / 手動コピー）と、このルールファイルの**参照パス**をそのリポジトリの配置に合わせて書き換える。

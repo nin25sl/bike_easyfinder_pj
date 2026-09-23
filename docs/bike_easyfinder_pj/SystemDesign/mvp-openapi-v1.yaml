@@ -1,0 +1,455 @@
+openapi: 3.1.0
+info:
+  title: Bike EasyFinder MVP API
+  version: 1.0.0-draft
+  description: RD-06およびRD-11で定義した推薦、行動イベント、匿名データ削除の契約。
+servers:
+  - url: https://api.example.invalid/v1
+    description: 実環境URLは基本設計で決定する
+tags:
+  - name: Recommendations
+  - name: Interactions
+  - name: Privacy
+
+paths:
+  /recommendations:
+    post:
+      tags: [Recommendations]
+      operationId: createRecommendations
+      summary: 現在地と利用条件からツーリング候補を返す
+      parameters:
+        - $ref: '#/components/parameters/InstallationId'
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecommendationRequest'
+      responses:
+        '200':
+          description: 推薦成功。候補0件も200で空配列を返す。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecommendationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '504':
+          $ref: '#/components/responses/GatewayTimeout'
+
+  /interactions:
+    post:
+      tags: [Interactions]
+      operationId: recordInteractions
+      summary: 同意済みユーザーの匿名行動イベントを記録する
+      parameters:
+        - $ref: '#/components/parameters/InstallationId'
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InteractionBatch'
+      responses:
+        '202':
+          description: 受理済み。event_idによって冪等に処理する。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [accepted]
+                properties:
+                  accepted:
+                    type: integer
+                    minimum: 0
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '413':
+          description: 1回の上限50件を超過
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /installations/{installation_id}/data:
+    delete:
+      tags: [Privacy]
+      operationId: requestInstallationDataDeletion
+      summary: 匿名端末IDに紐づく行動イベントの削除を要求する
+      parameters:
+        - name: installation_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: X-Deletion-Token
+          in: header
+          required: true
+          schema:
+            type: string
+            minLength: 32
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '202':
+          description: 削除要求受理。7日以内に削除する。
+        '401':
+          description: 削除トークンが無効
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: 対象が存在しない場合も列挙防止のため202を返す実装を推奨
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+components:
+  parameters:
+    InstallationId:
+      name: X-Installation-ID
+      in: header
+      required: false
+      description: 分析同意済みの場合のみ送る匿名UUID。推薦機能自体には必須としない。
+      schema:
+        type: string
+        format: uuid
+    RequestId:
+      name: X-Request-ID
+      in: header
+      required: false
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    RecommendationRequest:
+      type: object
+      additionalProperties: false
+      required: [origin, available_minutes, interests, allow_highway]
+      properties:
+        origin:
+          $ref: '#/components/schemas/Coordinate'
+        available_minutes:
+          type: integer
+          enum: [60, 120, 180, 240, 360, 600]
+        interests:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/Interest'
+        allow_highway:
+          type: boolean
+        locale:
+          type: string
+          default: ja-JP
+
+    RecommendationResponse:
+      type: object
+      required: [recommendation_id, generated_at, candidates, warnings]
+      properties:
+        recommendation_id:
+          type: string
+          format: uuid
+        generated_at:
+          type: string
+          format: date-time
+        candidates:
+          type: array
+          maxItems: 5
+          items:
+            $ref: '#/components/schemas/RecommendationCandidate'
+        warnings:
+          type: array
+          items:
+            $ref: '#/components/schemas/Warning'
+
+    RecommendationCandidate:
+      type: object
+      required:
+        - spot_id
+        - name
+        - category
+        - tags
+        - coordinate
+        - outbound_minutes
+        - stay_minutes
+        - return_minutes
+        - return_buffer_minutes
+        - estimated_total_minutes
+        - distance_km
+        - score
+        - reasons
+        - route
+        - freshness
+      properties:
+        spot_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        summary:
+          type: [string, 'null']
+        category:
+          $ref: '#/components/schemas/SpotCategory'
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/Interest'
+        coordinate:
+          $ref: '#/components/schemas/Coordinate'
+        outbound_minutes:
+          type: integer
+          minimum: 0
+        stay_minutes:
+          type: integer
+          minimum: 0
+        return_minutes:
+          type: integer
+          minimum: 0
+        return_buffer_minutes:
+          type: integer
+          minimum: 15
+        estimated_total_minutes:
+          type: integer
+          minimum: 0
+        return_eta:
+          type: [string, 'null']
+          format: date-time
+        distance_km:
+          type: number
+          minimum: 0
+        score:
+          type: number
+          minimum: 0
+          maximum: 100
+        reasons:
+          type: array
+          minItems: 1
+          maxItems: 3
+          items:
+            type: string
+        route:
+          $ref: '#/components/schemas/RouteSummary'
+        freshness:
+          $ref: '#/components/schemas/Freshness'
+        constraints:
+          $ref: '#/components/schemas/Constraints'
+
+    Coordinate:
+      type: object
+      additionalProperties: false
+      required: [latitude, longitude]
+      properties:
+        latitude:
+          type: number
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          minimum: -180
+          maximum: 180
+
+    RouteSummary:
+      type: object
+      required: [profile, encoded_polyline, shape_format]
+      properties:
+        profile:
+          type: string
+          enum: [motorcycle, auto]
+        encoded_polyline:
+          type: string
+        shape_format:
+          type: string
+          const: polyline6
+
+    Freshness:
+      type: object
+      required: [spot_verified_at, route_generated_at]
+      properties:
+        spot_verified_at:
+          type: string
+          format: date-time
+        route_generated_at:
+          type: string
+          format: date-time
+        hours_verified_at:
+          type: [string, 'null']
+          format: date-time
+
+    Constraints:
+      type: object
+      properties:
+        opening_hours:
+          type: string
+          enum: [open, closed, unknown]
+        weather:
+          type: string
+          enum: [not_requested, ok, warning, unavailable]
+        road_information:
+          type: string
+          const: external_confirmation_required
+
+    Warning:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          enum:
+            - PARTIAL_ROUTE_FAILURE
+            - STALE_SPOT_DATA
+            - HOURS_UNKNOWN
+            - WEATHER_UNAVAILABLE
+            - ROAD_INFORMATION_EXTERNAL
+        message:
+          type: string
+
+    InteractionBatch:
+      type: object
+      additionalProperties: false
+      required: [events]
+      properties:
+        events:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items:
+            $ref: '#/components/schemas/InteractionEvent'
+
+    InteractionEvent:
+      type: object
+      additionalProperties: false
+      required:
+        - event_id
+        - session_id
+        - recommendation_id
+        - spot_id
+        - event_type
+        - occurred_at
+      properties:
+        event_id:
+          type: string
+          format: uuid
+        session_id:
+          type: string
+          format: uuid
+        recommendation_id:
+          type: string
+          format: uuid
+        spot_id:
+          type: string
+          format: uuid
+        event_type:
+          type: string
+          enum: [shown, interested, not_interested, visited, selected, route_started]
+        occurred_at:
+          type: string
+          format: date-time
+        rank:
+          type: [integer, 'null']
+          minimum: 1
+          maximum: 5
+        available_minutes:
+          type: [integer, 'null']
+          enum: [60, 120, 180, 240, 360, 600, null]
+        interests:
+          type: array
+          items:
+            $ref: '#/components/schemas/Interest'
+
+    Interest:
+      type: string
+      enum:
+        - any
+        - scenic
+        - sea
+        - mountain
+        - winding
+        - cafe
+        - food
+        - onsen
+        - roadside_station
+        - night_view
+        - historic
+
+    SpotCategory:
+      type: string
+      enum:
+        - scenic_view
+        - coast
+        - mountain
+        - cafe
+        - restaurant
+        - onsen
+        - roadside_station
+        - historic_site
+        - tourist_attraction
+
+    Problem:
+      type: object
+      required: [type, title, status, code]
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        code:
+          type: string
+        detail:
+          type: string
+        request_id:
+          type: string
+          format: uuid
+
+  responses:
+    BadRequest:
+      description: JSONまたはパラメータが不正
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    UnprocessableEntity:
+      description: 値は解釈可能だが業務条件に違反
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    TooManyRequests:
+      description: レート制限超過
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    ServiceUnavailable:
+      description: 一時的な依存サービス障害
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    GatewayTimeout:
+      description: 推薦処理がサーバ側期限を超過
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'

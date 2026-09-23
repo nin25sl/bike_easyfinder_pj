@@ -1,0 +1,19 @@
+# Local secrets and environment files
+.env
+.env.*
+!.env.example
+
+# macOS / Windows
+.DS_Store
+Thumbs.db
+
+# Xcode / Swift
+DerivedData/
+.build/
+*.xcuserstate
+xcuserdata/
+
+# XcodeGen generated user data
+ios/BikeEasyFinder/*.xcodeproj/xcuserdata/
+ios/BikeEasyFinder/*.xcworkspace/xcuserdata/
+
