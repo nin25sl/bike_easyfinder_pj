@@ -1,0 +1,147 @@
+collection:
+  checkpoint_every: 100
+  raw_retention_days: 90
+  outside_region_review_meters: 500
+  duplicate_distance_meters: 100
+  duplicate_name_similarity: 0.8
+  max_response_bytes: 10485760
+
+openai:
+  discovery_model: gpt-6-astra
+  extraction_model: gpt-6-luna
+  store: false
+  request_timeout_seconds: 120
+  max_retries: 3
+  run_budget_jpy: 500
+  monthly_budget_jpy: 3000
+  prompt_version: spot-collection-v1
+
+sources:
+  n03:
+    source_type: n03
+    approval_status: approved
+    license_status: verified
+    license_name: 国土数値情報ダウンロードサービス利用約款
+    terms_url: https://nlftp.mlit.go.jp/ksj/other/agreement_02.html
+    attribution_text: 国土数値情報（行政区域データ）（国土交通省）を加工して作成
+    raw_storage_policy: full_allowed
+    base_url: https://nlftp.mlit.go.jp/ksj/gml/data/N03/N03-2023/N03-20230101_GML.zip
+    rate_limit_per_minute: 1
+    request_timeout_seconds: 300
+    max_pages_per_run: 1
+    refresh_interval_days: 365
+    config:
+      dataset_version: N03-20230101
+      valid_from: 2023-01-01
+
+  osm_overpass:
+    source_type: osm_overpass
+    approval_status: approved
+    license_status: verified
+    license_name: ODbL-1.0
+    terms_url: https://www.openstreetmap.org/copyright
+    attribution_text: © OpenStreetMap contributors
+    raw_storage_policy: full_allowed
+    base_url: https://overpass-api.de/api/interpreter
+    rate_limit_per_minute: 1
+    request_timeout_seconds: 180
+    max_pages_per_run: 20
+    refresh_interval_days: 30
+    config:
+      user_agent: "BikeEasyFinder/0.1 (spot collection; contact: mailto:nakamuback.s@gmail.com)"
+      cache_ttl_seconds: 86400
+
+  public_open_data:
+    source_type: public_open_data
+    approval_status: approved
+    license_status: verified
+    license_name: Source-specific
+    terms_url: null
+    attribution_text: null
+    raw_storage_policy: facts_only
+    base_url: null
+    rate_limit_per_minute: 6
+    request_timeout_seconds: 60
+    max_pages_per_run: 20
+    refresh_interval_days: 30
+    config:
+      datasets: []
+      ai_extract: false
+
+  openai_web_discovery:
+    source_type: openai_web_discovery
+    approval_status: approved
+    license_status: restricted
+    license_name: Discovery-only
+    terms_url: https://developers.openai.com/api/docs/guides/tools-web-search
+    attribution_text: null
+    raw_storage_policy: metadata_only
+    base_url: null
+    rate_limit_per_minute: 6
+    request_timeout_seconds: 120
+    max_pages_per_run: 12
+    refresh_interval_days: 30
+    config:
+      search_themes:
+        - 景勝地
+        - 海岸
+        - 山
+        - 温泉
+        - カフェ
+        - 飲食
+        - 道の駅
+        - 史跡
+        - 観光施設
+        - 二輪駐車場
+
+  fukuoka_codex_reviewed:
+    source_type: manual_seed
+    approval_status: approved
+    license_status: unknown
+    license_name: Source-specific public web pages
+    terms_url: null
+    attribution_text: null
+    raw_storage_policy: facts_only
+    base_url: null
+    rate_limit_per_minute: 1
+    request_timeout_seconds: 60
+    max_pages_per_run: 100
+    refresh_interval_days: 30
+    config:
+      paths:
+        - /app/seeds/fukuoka_codex_reviewed_spots.jsonl
+      ai_extract: false
+
+  manual_seed:
+    source_type: manual_seed
+    approval_status: approved
+    license_status: unknown
+    license_name: Source-specific
+    terms_url: null
+    attribution_text: null
+    raw_storage_policy: facts_only
+    base_url: null
+    rate_limit_per_minute: 6
+    request_timeout_seconds: 60
+    max_pages_per_run: 100
+    refresh_interval_days: 30
+    config:
+      paths:
+        - /app/seeds/manual_spots.jsonl
+      ai_extract: false
+
+  osm_pbf:
+    source_type: osm_pbf
+    approval_status: approved
+    license_status: verified
+    license_name: ODbL-1.0
+    terms_url: https://www.openstreetmap.org/copyright
+    attribution_text: © OpenStreetMap contributors
+    raw_storage_policy: full_allowed
+    base_url: null
+    rate_limit_per_minute: 1
+    request_timeout_seconds: 600
+    max_pages_per_run: 1
+    refresh_interval_days: 30
+    config:
+      extract_path: null

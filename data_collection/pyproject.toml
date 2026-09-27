@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bike-easyfinder-data-collection"
+version = "0.1.0"
+description = "Source-aware touring spot collection worker"
+requires-python = ">=3.12"
+dependencies = [
+  "geoalchemy2>=0.18,<1",
+  "geopandas>=1.1,<2",
+  "httpx>=0.28,<1",
+  "jsonschema>=4.25,<5",
+  "openai>=2.20,<3",
+  "pandas>=2.3,<3",
+  "pydantic>=2.11,<3",
+  "pydantic-settings>=2.10,<3",
+  "psycopg[binary]>=3.2,<4",
+  "pyogrio>=0.11,<1",
+  "PyYAML>=6.0,<7",
+  "rapidfuzz>=3.14,<4",
+  "shapely>=2.1,<3",
+  "SQLAlchemy>=2.0,<3",
+  "typer>=0.17,<1"
+]
+
+[project.optional-dependencies]
+test = [
+  "pytest>=8.4,<9",
+  "pytest-cov>=6.2,<7",
+  "respx>=0.22,<1"
+]
+
+[project.scripts]
+spot-collector = "collection_worker.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bike-easyfinder.local/schemas/spot-observation-v1.json",
+  "title": "SpotObservation v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["name", "name_reading", "address", "latitude", "longitude", "description_facts", "source_categories", "features", "opening_hours_text", "business_status", "parking", "motorcycle_access", "road_access", "suggested_stay_minutes", "official_url", "evidence"],
+  "properties": {
+    "name": {"type": ["string", "null"]},
+    "name_reading": {"type": ["string", "null"]},
+    "address": {"type": ["string", "null"]},
+    "latitude": {"type": ["number", "null"], "minimum": -90, "maximum": 90},
+    "longitude": {"type": ["number", "null"], "minimum": -180, "maximum": 180},
+    "description_facts": {"type": "array", "items": {"type": "string"}},
+    "source_categories": {"type": "array", "items": {"type": "string"}},
+    "features": {"type": "array", "items": {"type": "string"}},
+    "opening_hours_text": {"type": ["string", "null"]},
+    "business_status": {"enum": ["open", "temporarily_closed", "permanently_closed", "unknown"]},
+    "parking": {"enum": ["available", "unavailable", "unknown"]},
+    "motorcycle_access": {"enum": ["allowed", "not_allowed", "unknown"]},
+    "road_access": {"enum": ["accessible", "restricted", "unknown"]},
+    "suggested_stay_minutes": {"type": ["integer", "null"], "minimum": 0},
+    "official_url": {"type": ["string", "null"]},
+    "evidence": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["field", "excerpt"], "properties": {"field": {"type": "string"}, "excerpt": {"type": "string"}}}}
+  }
+}

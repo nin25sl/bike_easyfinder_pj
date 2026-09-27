@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bike-easyfinder.local/schemas/spot-candidate-v1.json",
+  "title": "SpotCandidate v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "candidate_id", "status", "name", "address", "location", "region", "quality_score", "review_reasons", "observations"],
+  "properties": {
+    "schema_version": {"const": "spot-candidate-v1"},
+    "candidate_id": {"type": "string", "format": "uuid"},
+    "status": {"enum": ["draft", "ready", "review_required", "rejected", "superseded"]},
+    "name": {"type": ["string", "null"]},
+    "address": {"type": ["string", "null"]},
+    "location": {"oneOf": [{"type": "null"}, {"type": "object", "additionalProperties": false, "required": ["latitude", "longitude"], "properties": {"latitude": {"type": "number"}, "longitude": {"type": "number"}}}]},
+    "region": {"type": "object", "additionalProperties": false, "required": ["code", "name", "kind", "dataset_version"], "properties": {"code": {"type": "string"}, "name": {"type": "string"}, "kind": {"type": "string"}, "dataset_version": {"type": "string"}}},
+    "quality_score": {"type": "number", "minimum": 0, "maximum": 100},
+    "review_reasons": {"type": "array", "items": {"type": "string"}},
+    "observations": {"type": "array", "items": {"type": "object", "additionalProperties": true, "required": ["field_name", "value", "extraction_method", "confidence", "source_url", "source_record_id", "retrieved_at", "license_status", "source_key", "raw_storage_policy"]}}
+  }
+}

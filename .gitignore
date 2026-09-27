@@ -6,6 +6,19 @@
 # macOS / Windows
 .DS_Store
 Thumbs.db
+.venv/
+.pytest-tmp/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.coverage
+.pytest_cache/
+data_collection/output/*
+!data_collection/output/.gitkeep
+data_collection/cache/*
+!data_collection/cache/.gitkeep
+data_collection/seeds/codex_pending/*
+!data_collection/seeds/codex_pending/.gitkeep
 
 # Xcode / Swift
 DerivedData/
@@ -16,4 +29,3 @@ xcuserdata/
 # XcodeGen generated user data
 ios/BikeEasyFinder/*.xcodeproj/xcuserdata/
 ios/BikeEasyFinder/*.xcworkspace/xcuserdata/
-
