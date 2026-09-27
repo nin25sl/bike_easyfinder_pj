@@ -1,12 +1,12 @@
 import Foundation
 
-struct SearchCriteria: Equatable {
+struct SearchCriteria: Codable, Equatable {
     var availableMinutes: Int = 120
     var interests: Set<SpotInterest> = [.any]
     var allowsHighway = false
 }
 
-enum SpotInterest: String, CaseIterable, Identifiable, Hashable {
+enum SpotInterest: String, CaseIterable, Codable, Identifiable, Hashable {
     case any
     case sea
     case scenic
@@ -38,6 +38,24 @@ enum SpotInterest: String, CaseIterable, Identifiable, Hashable {
     }
 }
 
+extension SearchCriteria {
+    var durationLabel: String {
+        DurationOption.mvpOptions.first(where: { $0.minutes == availableMinutes })?.label
+            ?? "\(availableMinutes)分"
+    }
+
+    var interestsLabel: String {
+        interests
+            .map(\.displayName)
+            .sorted()
+            .joined(separator: "、")
+    }
+
+    var highwayLabel: String {
+        allowsHighway ? "使ってよい" : "使わない"
+    }
+}
+
 struct DurationOption: Identifiable, Hashable {
     let minutes: Int
     let label: String
@@ -53,4 +71,3 @@ struct DurationOption: Identifiable, Hashable {
         DurationOption(minutes: 600, label: "1日")
     ]
 }
-

@@ -1,7 +1,7 @@
 import CoreLocation
 import Foundation
 
-struct TouringSpot: Identifiable, Equatable {
+struct TouringSpot: Codable, Identifiable, Equatable {
     let id: UUID
     let name: String
     let summary: String
@@ -13,6 +13,11 @@ struct TouringSpot: Identifiable, Equatable {
     let stayMinutes: Int
     let distanceKilometers: Double
     let recommendationReason: String
+    var verifiedAt: Date = Date(timeIntervalSince1970: 1_788_566_400)
+    var sourceLabel: String = "公開情報・現地確認"
+    var motorcycleParkingNote: String = "二輪駐車場所は現地の案内を確認してください"
+
+    static let safetyBufferMinutes = 15
 
     var totalMinutes: Int {
         outboundMinutes + stayMinutes + returnMinutes
@@ -22,7 +27,19 @@ struct TouringSpot: Identifiable, Equatable {
         CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
     }
 
+    var estimatedTotalMinutes: Int {
+        totalMinutes + Self.safetyBufferMinutes
+    }
+
     var formattedDuration: String {
+        Self.format(minutes: totalMinutes)
+    }
+
+    var formattedEstimatedDuration: String {
+        Self.format(minutes: estimatedTotalMinutes)
+    }
+
+    private static func format(minutes totalMinutes: Int) -> String {
         let hours = totalMinutes / 60
         let minutes = totalMinutes % 60
         if hours == 0 { return "\(minutes)分" }
@@ -30,4 +47,3 @@ struct TouringSpot: Identifiable, Equatable {
         return "\(hours)時間\(minutes)分"
     }
 }
-

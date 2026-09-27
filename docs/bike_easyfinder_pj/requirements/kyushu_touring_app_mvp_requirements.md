@@ -1,4 +1,6 @@
-# 九州ツーリング提案アプリ MVP 要件定義書
+# 九州ツーリング提案アプリ MVP 要件定義書（旧版・参照非推奨）
+
+> 本書は旧検討資料であり、Valhalla、候補一覧、興味なしの除外等に現行の承認事項と異なる記載を含む。現行の正本は `../SystemDesign/mvp-requirements-v1.md` と `../tasks/bike_easyfinder_RD05_RD12_review_summary.md` とし、本書の矛盾する記載を設計・実装根拠に使用しない。
 
 ## 1. プロジェクト概要
 

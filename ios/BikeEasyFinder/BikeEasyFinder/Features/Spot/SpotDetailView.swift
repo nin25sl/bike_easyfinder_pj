@@ -1,109 +1,92 @@
 import SwiftUI
-import UIKit
 
 struct SpotDetailView: View {
-    private enum Feedback: String {
-        case interested
-        case notInterested
-        case visited
-
-        var label: String {
-            switch self {
-            case .interested: "興味あり"
-            case .notInterested: "今回は違う"
-            case .visited: "訪問済み"
-            }
-        }
-    }
-
     let spot: TouringSpot
-
-    @State private var isOpeningMaps = false
-    @State private var showNavigationFailure = false
-    @State private var feedback: Feedback?
-    private let navigationService = ExternalNavigationService()
+    let reaction: SpotReaction?
+    let onReact: (SpotReaction) -> Void
+    let onNavigate: () -> Void
 
     var body: some View {
-        List {
-            Section {
-                SpotMapView(spot: spot)
-                    .frame(height: 260)
-                    .listRowInsets(EdgeInsets())
-            }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 22) {
+                SpotHero(spot: spot)
 
-            Section("概要") {
                 Text(spot.summary)
-                LabeledContent("合計所要時間", value: spot.formattedDuration)
-                LabeledContent("往路", value: "\(spot.outboundMinutes)分")
-                LabeledContent("滞在目安", value: "\(spot.stayMinutes)分")
-                LabeledContent("復路", value: "\(spot.returnMinutes)分")
-                LabeledContent("概算距離", value: "\(spot.distanceKilometers, specifier: "%.0f")km")
-            }
+                    .font(.body)
 
-            Section("推薦理由") {
-                Text(spot.recommendationReason)
-                Text(spot.tags.map(\.displayName).sorted().map { "#\($0)" }.joined(separator: "  "))
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
+                TimeSummary(spot: spot)
 
-            Section("この候補について") {
-                ForEach([Feedback.interested, .notInterested, .visited], id: \.rawValue) { option in
-                    Button {
-                        feedback = option
-                    } label: {
-                        HStack {
-                            Text(option.label)
-                                .foregroundStyle(.primary)
-                            Spacer()
-                            if feedback == option {
-                                Image(systemName: "checkmark")
-                                    .foregroundStyle(.tint)
+                SpotMapView(spot: spot)
+                    .frame(height: 240)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("現地情報")
+                        .font(.title3.bold())
+                    Label(spot.motorcycleParkingNote, systemImage: "parkingsign.circle")
+                    Label("概算距離 \(spot.distanceKilometers, specifier: "%.0f")km", systemImage: "point.topleft.down.to.point.bottomright.curvepath")
+                }
+
+                StatusNotice(
+                    kind: .warning,
+                    title: "天気情報を確認できません",
+                    message: "固定データ版ではWeatherKit未接続です。出発前に目的地の最新の天気を確認してください。"
+                )
+
+                ReasonBlock(reason: spot.recommendationReason)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("情報の根拠")
+                        .font(.headline)
+                    LabeledContent("出典", value: spot.sourceLabel)
+                    LabeledContent(
+                        "最終確認",
+                        value: spot.verifiedAt.formatted(date: .abbreviated, time: .omitted)
+                    )
+                }
+
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("この候補について")
+                        .font(.headline)
+                    ForEach(SpotReaction.allCases) { option in
+                        Button {
+                            onReact(option)
+                        } label: {
+                            HStack {
+                                Label(option.label, systemImage: option.systemImage)
+                                    .foregroundStyle(.primary)
+                                Spacer()
+                                if reaction == option {
+                                    Image(systemName: "checkmark")
+                                        .foregroundStyle(AppTheme.brand)
+                                }
                             }
+                            .frame(minHeight: 44)
                         }
+                        .buttonStyle(.plain)
+                        .accessibilityAddTraits(reaction == option ? .isSelected : [])
                     }
                 }
-
-                if feedback != nil {
-                    Text("β版の計測仕様が確定するまで、この選択は画面を閉じると破棄されます。")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
+                .padding()
+                .background(AppTheme.cardBackground, in: RoundedRectangle(cornerRadius: 14))
             }
-
-            Section {
-                Button {
-                    isOpeningMaps = true
-                    let success = navigationService.openInAppleMaps(spot)
-                    isOpeningMaps = false
-                    showNavigationFailure = !success
-                } label: {
-                    if isOpeningMaps {
-                        HStack {
-                            ProgressView()
-                            Text("Apple Mapsを開いています…")
-                        }
-                        .frame(maxWidth: .infinity)
-                    } else {
-                        Text("ここに行く（Apple Maps）")
-                            .frame(maxWidth: .infinity)
-                    }
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(isOpeningMaps)
-            } footer: {
-                Text("ルートと所要時間は変わる場合があります。現地の標識とApple Mapsの最新情報を確認してください。")
-            }
+            .padding()
         }
         .navigationTitle(spot.name)
         .navigationBarTitleDisplayMode(.inline)
-        .alert("Apple Mapsを開けませんでした", isPresented: $showNavigationFailure) {
-            Button("座標をコピー") {
-                UIPasteboard.general.string = "\(spot.latitude),\(spot.longitude)"
-            }
-            Button("閉じる", role: .cancel) {}
-        } message: {
-            Text("目的地の座標をコピーして、ナビアプリで検索できます。")
+        .safeAreaInset(edge: .bottom) {
+            PrimaryBottomAction(title: "ここに行く", systemImage: "arrow.triangle.turn.up.right.diamond", action: onNavigate)
         }
+    }
+}
+
+#Preview {
+    NavigationStack {
+        SpotDetailView(
+            spot: Array<TouringSpot>.demoSpots[0],
+            reaction: nil,
+            onReact: { _ in },
+            onNavigate: {}
+        )
     }
 }

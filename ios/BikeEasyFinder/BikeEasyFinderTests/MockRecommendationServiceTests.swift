@@ -21,7 +21,7 @@ final class MockRecommendationServiceTests: XCTestCase {
         let results = try await service.recommendations(origin: origin, criteria: criteria)
 
         XCTAssertFalse(results.isEmpty)
-        XCTAssertTrue(results.allSatisfy { $0.totalMinutes <= 120 })
+        XCTAssertTrue(results.allSatisfy { $0.estimatedTotalMinutes <= 120 })
     }
 
     func testRecommendationsRespectSelectedInterest() async throws {
@@ -42,5 +42,26 @@ final class MockRecommendationServiceTests: XCTestCase {
 
         XCTAssertTrue(results.isEmpty)
     }
-}
 
+    func testInvalidOriginIsRejected() async {
+        let service = MockRecommendationService()
+        let invalidOrigin = CLLocationCoordinate2D(latitude: 100, longitude: 130)
+
+        do {
+            _ = try await service.recommendations(origin: invalidOrigin, criteria: SearchCriteria())
+            XCTFail("invalid origin must fail")
+        } catch {
+            XCTAssertEqual(error as? RecommendationError, .invalidOrigin)
+        }
+    }
+
+    func testSameInputProducesSameOrder() async throws {
+        let service = MockRecommendationService()
+        let criteria = SearchCriteria(availableMinutes: 600, interests: [.any], allowsHighway: true)
+
+        let first = try await service.recommendations(origin: origin, criteria: criteria)
+        let second = try await service.recommendations(origin: origin, criteria: criteria)
+
+        XCTAssertEqual(first.map(\.id), second.map(\.id))
+    }
+}

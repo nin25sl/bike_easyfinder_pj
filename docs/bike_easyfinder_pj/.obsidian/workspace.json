@@ -11,14 +11,10 @@
             "id": "6efec5fb17ba1e03",
             "type": "leaf",
             "state": {
-              "type": "markdown",
-              "state": {
-                "file": "Procedure/spot-data-collection-operation-procedure-v1.md",
-                "mode": "source",
-                "source": false
-              },
+              "type": "empty",
+              "state": {},
               "icon": "lucide-file",
-              "title": "spot-data-collection-operation-procedure-v1"
+              "title": "新規タブ"
             }
           }
         ]
@@ -190,11 +186,35 @@
   },
   "active": "6efec5fb17ba1e03",
   "lastOpenFiles": [
-    "Procedure/spot-data-collection-execution-procedure-v1.md",
-    "Procedure/spot-data-collection-operation-procedure-v1.md",
-    "requirements/20260923_first_investigation.md",
-    "SystemDesign/spot-data-collection-basic-design-v1.md",
+    "tasks/tasks.md",
+    "tasks/sc-mvp-ui-design-proposal-v1-task.md",
+    "tasks/sc-mvp-detailed-design-v1-task.md",
+    "tasks/sc-ios-fixed-data-ui-implementation-v1-task.md",
+    "Test/mvp-test-plan-v1.md",
+    "Test",
+    "SystemDesign/privacy-policy-draft-v1.md",
+    "SystemDesign/mvp-ui-design-proposal-v1.md",
+    "Procedure/apple-maps-server-api-poc-execution-procedure-v1.md",
+    "NewPlanning/tasks/np-subscription-plan-v1-task.md",
+    "NewPlanning/tasks",
+    "NewPlanning/subscription-plan-v1.md",
+    "NewPlanning",
+    "MVP/personal-team-MVP-architecture.canvas.tsx",
+    "MVP/bike-easyfinder-ui-concept.canvas.tsx",
+    "MVP",
+    "Handover/mvp-test-execution-qc-handover-v1.md",
+    "Handover/apple-maps-server-api-poc-v1.md",
+    "Handover/mvp-basic-design-v1-approval.md",
     "SystemDesign/openai-voice-requirements-handoff.md",
+    "SystemDesign/mvp-requirements-v1.md",
+    "SystemDesign/mvp-basic-design-v1.md",
+    "SystemDesign/mvp-requirements-decision-backlog.md",
+    "tasks/sc-mvp-basic-design-v1-task.md",
+    "requirements/20260923_first_investigation.md",
+    "requirements/kyushu_touring_app_mvp_requirements.md",
+    "Procedure/spot-data-collection-operation-procedure-v1.md",
+    "Procedure/spot-data-collection-execution-procedure-v1.md",
+    "SystemDesign/spot-data-collection-basic-design-v1.md",
     "Handover",
     "Procedure/Untitled"
   ]

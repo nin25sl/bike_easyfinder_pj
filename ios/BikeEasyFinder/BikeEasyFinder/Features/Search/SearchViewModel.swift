@@ -21,6 +21,19 @@ final class SearchViewModel: ObservableObject {
         self.recommendationService = recommendationService
     }
 
+    var currentSpot: TouringSpot? {
+        spots.first
+    }
+
+    func useCriteria(_ criteria: SearchCriteria) {
+        self.criteria = criteria
+    }
+
+    func resetResults() {
+        resultState = .idle
+        spots = []
+    }
+
     func toggleInterest(_ interest: SpotInterest) {
         if interest == .any {
             criteria.interests = [.any]
@@ -57,4 +70,3 @@ final class SearchViewModel: ObservableObject {
         }
     }
 }
-

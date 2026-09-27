@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: Bike EasyFinder MVP API
-  version: 1.0.0-draft
-  description: RD-06およびRD-11で定義した推薦、行動イベント、匿名データ削除の契約。
+  version: 1.0.0
+  description: RD-06および承認済みRD-11に基づくRecommendation、オプトイン分析、匿名データ削除の契約。
 servers:
   - url: https://api.example.invalid/v1
     description: 実環境URLは基本設計で決定する
@@ -18,7 +18,6 @@ paths:
       operationId: createRecommendations
       summary: 現在地と利用条件からツーリング候補を返す
       parameters:
-        - $ref: '#/components/parameters/InstallationId'
         - $ref: '#/components/parameters/RequestId'
       requestBody:
         required: true
@@ -47,8 +46,9 @@ paths:
   /interactions:
     post:
       tags: [Interactions]
+      x-approval-status: approved
       operationId: recordInteractions
-      summary: 同意済みユーザーの匿名行動イベントを記録する
+      summary: 明示同意済みの場合だけ匿名行動イベントを受け付ける
       parameters:
         - $ref: '#/components/parameters/InstallationId'
         - $ref: '#/components/parameters/RequestId'
@@ -86,8 +86,9 @@ paths:
   /installations/{installation_id}/data:
     delete:
       tags: [Privacy]
+      x-approval-status: approved
       operationId: requestInstallationDataDeletion
-      summary: 匿名端末IDに紐づく行動イベントの削除を要求する
+      summary: analytics installation IDに紐づく生データの削除を要求する
       parameters:
         - name: installation_id
           in: path
@@ -111,8 +112,6 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-        '404':
-          description: 対象が存在しない場合も列挙防止のため202を返す実装を推奨
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
@@ -122,7 +121,7 @@ components:
       name: X-Installation-ID
       in: header
       required: false
-      description: 分析同意済みの場合のみ送る匿名UUID。推薦機能自体には必須としない。
+      description: 明示的な分析同意後にだけ発行・送信する匿名UUID。推薦機能には使用せず、最終イベントから90日で失効する。
       schema:
         type: string
         format: uuid

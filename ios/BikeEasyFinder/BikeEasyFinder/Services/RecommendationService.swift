@@ -8,7 +8,7 @@ protocol RecommendationProviding {
     ) async throws -> [TouringSpot]
 }
 
-enum RecommendationError: LocalizedError {
+enum RecommendationError: LocalizedError, Equatable {
     case invalidOrigin
 
     var errorDescription: String? {
@@ -34,15 +34,15 @@ struct MockRecommendationService: RecommendationProviding {
         let usesAnyInterest = criteria.interests.contains(.any)
         return Array(
             spots
-                .filter { $0.totalMinutes <= criteria.availableMinutes }
+                .filter { $0.estimatedTotalMinutes <= criteria.availableMinutes }
                 .filter { spot in
                     usesAnyInterest || !spot.tags.isDisjoint(with: criteria.interests)
                 }
                 .sorted {
-                    if $0.totalMinutes == $1.totalMinutes {
-                        return $0.name.localizedStandardCompare($1.name) == .orderedAscending
+                    if $0.estimatedTotalMinutes == $1.estimatedTotalMinutes {
+                        return $0.id.uuidString < $1.id.uuidString
                     }
-                    return $0.totalMinutes < $1.totalMinutes
+                    return $0.estimatedTotalMinutes < $1.estimatedTotalMinutes
                 }
                 .prefix(5)
         )
@@ -131,4 +131,3 @@ extension Array where Element == TouringSpot {
         )
     ]
 }
-

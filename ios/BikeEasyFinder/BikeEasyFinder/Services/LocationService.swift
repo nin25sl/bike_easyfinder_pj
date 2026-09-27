@@ -37,6 +37,11 @@ final class LocationService: NSObject, ObservableObject {
             state = .failed("位置情報の権限状態を確認できませんでした。")
         }
     }
+
+    func discardCurrentLocation() {
+        currentLocation = nil
+        state = .idle
+    }
 }
 
 extension LocationService: CLLocationManagerDelegate {
@@ -76,4 +81,3 @@ extension LocationService: CLLocationManagerDelegate {
         }
     }
 }
-
