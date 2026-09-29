@@ -11,10 +11,14 @@
             "id": "6efec5fb17ba1e03",
             "type": "leaf",
             "state": {
-              "type": "empty",
-              "state": {},
+              "type": "markdown",
+              "state": {
+                "file": "Procedure/apple-maps-server-api-poc-execution-procedure-v1.md",
+                "mode": "source",
+                "source": false
+              },
               "icon": "lucide-file",
-              "title": "新規タブ"
+              "title": "apple-maps-server-api-poc-execution-procedure-v1"
             }
           }
         ]
