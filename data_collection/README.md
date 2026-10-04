@@ -1,3 +1,4 @@
+収集成功している箇所としていない箇所を出すスクリプトをください。
 # Spot data collection worker
 
 The worker implements `spot-data-collection-basic-design-v1.md` as a local

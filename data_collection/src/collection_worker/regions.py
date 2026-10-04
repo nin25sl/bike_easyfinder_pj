@@ -22,15 +22,50 @@ from collection_worker.logging import emit
 from collection_worker.utils import validate_local_government_code
 
 
+MAX_ARCHIVE_MEMBER_BYTES = 500 * 1024 * 1024
+SHAPEFILE_COMPONENT_SUFFIXES = {
+    ".cpg",
+    ".dbf",
+    ".prj",
+    ".qix",
+    ".sbn",
+    ".sbx",
+    ".shp",
+    ".shx",
+}
+
+
 def _safe_extract(archive: zipfile.ZipFile, destination: Path) -> None:
     root = destination.resolve()
-    for member in archive.infolist():
-        if member.file_size > 500 * 1024 * 1024:
-            raise ConfigurationError(f"N03 archive member is too large: {member.filename}")
+    members = [member for member in archive.infolist() if not member.is_dir()]
+    for member in members:
         target = (destination / member.filename).resolve()
         if root not in target.parents and target != root:
             raise ConfigurationError(f"Unsafe N03 archive path: {member.filename}")
-    archive.extractall(destination)
+
+    # The national N03 archive contains the same dataset in multiple formats.
+    # Prefer the much smaller Shapefile representation and do not expand the
+    # very large, redundant GeoJSON member.
+    shapefiles = [member for member in members if Path(member.filename).suffix.lower() == ".shp"]
+    if shapefiles:
+        primary = Path(shapefiles[0].filename)
+        selected = [
+            member
+            for member in members
+            if Path(member.filename).parent == primary.parent
+            and Path(member.filename).stem == primary.stem
+            and Path(member.filename).suffix.lower() in SHAPEFILE_COMPONENT_SUFFIXES
+        ]
+    else:
+        geojson = [member for member in members if Path(member.filename).suffix.lower() == ".geojson"]
+        selected = geojson[:1]
+
+    if not selected:
+        raise ConfigurationError("N03 archive contains no supported GIS file")
+    for member in selected:
+        if member.file_size > MAX_ARCHIVE_MEMBER_BYTES:
+            raise ConfigurationError(f"N03 archive member is too large: {member.filename}")
+        archive.extract(member, destination)
 
 
 def _as_multipolygon(geometry):
