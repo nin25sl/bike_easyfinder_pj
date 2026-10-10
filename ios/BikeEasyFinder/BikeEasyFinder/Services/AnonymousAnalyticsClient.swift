@@ -53,6 +53,7 @@ final class AnonymousAnalyticsClient {
         self.session = session
         self.defaults = defaults
         self.keychain = keychain
+        queue = []
         encoder.keyEncodingStrategy = .convertToSnakeCase
         encoder.dateEncodingStrategy = .iso8601
         decoder.dateDecodingStrategy = .iso8601

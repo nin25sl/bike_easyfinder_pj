@@ -65,7 +65,7 @@ struct MockRecommendationService: RecommendationProviding {
                 }
                 .prefix(5)
         )
-        let warnings = if let appliedTolerance, appliedTolerance > 15 {
+        let warnings: [String] = if let appliedTolerance, appliedTolerance > 15 {
             ["指定時間±15分の候補がなかったため、±\(appliedTolerance)分まで範囲を広げました。"]
         } else {
             []
