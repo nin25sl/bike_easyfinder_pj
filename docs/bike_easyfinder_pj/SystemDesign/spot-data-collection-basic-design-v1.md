@@ -1,8 +1,9 @@
 ---
 title: Spotデータ収集機構 基本設計書 v1
 published: 2026-09-23
+updated: 2026-10-10
 description: 全国の都道府県・市区町村を指定してSpot原情報を継続収集するWorker、データ、AI連携、運用の基本設計
-tags: [mvp, data-collection, postgis, openstreetmap, openai, worker]
+tags: [mvp, data-collection, postgis, openstreetmap, openai, worker, SC]
 category: SystemDesign
 draft: true
 ---
@@ -55,6 +56,14 @@ draft: true
 - クラウド基盤とクラウドスケジューラーの構築
 
 本機構の最終出力は公開Spotではなく、出典と品質状態を伴う公開前のSpot候補である。
+
+### 3.3 画像収集の後続設計
+
+画像収集は初期版の対象外を維持し、表示はプレースホルダへフォールバックする。後続フェーズで実装する場合は、任意Webサイトの画像URLをそのまま保存・ホットリンクせず、Wikimedia Commons等の再利用条件と帰属を確認できるSourceだけを対象とする。
+
+後続のCanonical境界では、Spot本体と分離した `spot_media` 相当の構造に、`spot_id`、自前オブジェクトストレージの保存URL、原典URL、ライセンス状態・名称・URL、帰属文、確認日時、代替テキスト、代表画像フラグを保持する。`license_status=verified` かつ画像保存・再配布を許可するSourceだけを公開候補とし、削除・利用条件変更をSourceから追跡できることを実装開始条件とする。
+
+公開APIの `hero_image` は任意項目とし、iOSは画像欠損・通信失敗・採用取消時に同じプレースホルダへ戻る。画像バイナリ保存先、変換サイズ、費用上限、キャッシュ・削除SLA、帰属表示位置をADRで承認するまで収集を有効化しない。
 
 ## 4. 設計原則
 
