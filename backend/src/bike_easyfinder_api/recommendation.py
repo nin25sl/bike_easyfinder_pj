@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import logging
+import math
+from concurrent.futures import ThreadPoolExecutor, TimeoutError, as_completed
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from concurrent.futures import ThreadPoolExecutor, TimeoutError, as_completed
 from uuid import UUID, uuid4
 
 from .contracts import (
@@ -15,7 +17,9 @@ from .contracts import (
     RouteSummary,
     WarningItem,
 )
-from .providers import RouteEstimate, RouteProvider
+from .providers import RouteEstimate, RouteProvider, haversine_km
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -34,6 +38,8 @@ class Spot:
 
 
 REACTION_WEIGHTS = {"interested": 15, "not_interested": -30, "visited": -12}
+TIME_WINDOW_TOLERANCES = (15, 30, 45, 60)
+MAX_ROUTE_CANDIDATES = 10
 
 
 def search_radius_km(available_minutes: int) -> float:
@@ -69,7 +75,9 @@ def _reasons(spot: Spot, request: RecommendationRequest, total: int) -> list[str
     return reasons[:3]
 
 
-def _diversify(candidates: list[RecommendationCandidate]) -> list[RecommendationCandidate]:
+def _diversify(
+    candidates: list[RecommendationCandidate], target_minutes: int
+) -> list[RecommendationCandidate]:
     remaining = list(candidates)
     result: list[RecommendationCandidate] = []
     while remaining and len(result) < 5:
@@ -80,7 +88,10 @@ def _diversify(candidates: list[RecommendationCandidate]) -> list[Recommendation
                 (
                     index
                     for index, item in enumerate(remaining[1:], start=1)
-                    if item.category != result[-1].category and best_score - item.score <= 5
+                    if item.category != result[-1].category
+                    and abs(item.estimated_total_minutes - target_minutes)
+                    == abs(remaining[0].estimated_total_minutes - target_minutes)
+                    and best_score - item.score <= 5
                 ),
                 None,
             )
@@ -88,6 +99,15 @@ def _diversify(candidates: list[RecommendationCandidate]) -> list[Recommendation
                 chosen_index = alternative
         result.append(remaining.pop(chosen_index))
     return result
+
+
+def _approximate_total_minutes(
+    origin: Coordinate, spot: Spot, allow_highway: bool
+) -> int:
+    road_km = haversine_km(origin, spot.coordinate) * 1.22
+    average_kph = 55 if allow_highway else 42
+    one_way = max(1, math.ceil(road_km / average_kph * 60))
+    return one_way * 2 + spot.stay_minutes + 15
 
 
 class RecommendationEngine:
@@ -113,19 +133,40 @@ class RecommendationEngine:
             if "any" not in requested and not requested.intersection(set(spot.tags) | {spot.category}):
                 continue
             eligible.append(spot)
-            if len(eligible) == 10:
-                break
+        eligible.sort(
+            key=lambda spot: (
+                abs(
+                    _approximate_total_minutes(request.origin, spot, request.allow_highway)
+                    - request.available_minutes
+                ),
+                str(spot.id),
+            )
+        )
+        eligible = eligible[:MAX_ROUTE_CANDIDATES]
 
         estimates, route_failures = self._estimate_routes(request, eligible)
+        evaluated: list[tuple[Spot, RouteEstimate, int]] = []
         for spot in eligible:
             route = estimates.get(spot.id)
             if route is None:
                 continue
 
             total = route.outbound_minutes + spot.stay_minutes + route.return_minutes + 15
-            if total > request.available_minutes:
-                continue
-            time_fit = max(0.0, 25.0 * (1 - abs(request.available_minutes - total) / request.available_minutes))
+            evaluated.append((spot, route, total))
+
+        applied_tolerance: int | None = None
+        selected: list[tuple[Spot, RouteEstimate, int]] = []
+        for tolerance in TIME_WINDOW_TOLERANCES:
+            selected = [
+                item for item in evaluated if abs(item[2] - request.available_minutes) <= tolerance
+            ]
+            if selected:
+                applied_tolerance = tolerance
+                break
+
+        for spot, route, total in selected:
+            difference = abs(request.available_minutes - total)
+            time_fit = max(0.0, 25.0 * (1 - difference / max(applied_tolerance or 15, 1)))
             score = _interest_score(spot, request)
             score += time_fit
             score += _preference_score(spot, request)
@@ -165,14 +206,30 @@ class RecommendationEngine:
             )
         if eligible and route_failures == len(eligible):
             raise RouteProviderUnavailable("all route estimates failed")
+        if applied_tolerance is not None and applied_tolerance > TIME_WINDOW_TOLERANCES[0]:
+            warnings.append(
+                WarningItem(
+                    code="TIME_WINDOW_EXPANDED",
+                    message=(
+                        "指定時間±15分の候補がなかったため、"
+                        f"±{applied_tolerance}分まで範囲を広げました。"
+                    ),
+                )
+            )
 
-        ranked.sort(key=lambda item: (-item.score, item.estimated_total_minutes, str(item.spot_id)))
+        ranked.sort(
+            key=lambda item: (
+                abs(item.estimated_total_minutes - request.available_minutes),
+                -item.score,
+                str(item.spot_id),
+            )
+        )
         return RecommendationResponse(
             recommendation_id=uuid4(),
             generated_at=generated_at,
             recommendation_rule_version=self._rule_version,
             data_version=self._data_version,
-            candidates=_diversify(ranked),
+            candidates=_diversify(ranked, request.available_minutes),
             warnings=warnings,
         )
 
@@ -198,8 +255,14 @@ class RecommendationEngine:
             for future in as_completed(futures, timeout=max(0.1, self._deadline_seconds - 0.1)):
                 try:
                     estimates[futures[future]] = future.result()
-                except Exception:
-                    pass
+                except Exception as error:  # noqa: BLE001 - provider failures are isolated per spot
+                    logger.warning(
+                        "route estimate failed",
+                        extra={
+                            "spot_id": str(futures[future]),
+                            "error_type": type(error).__name__,
+                        },
+                    )
         except TimeoutError:
             pass
         finally:

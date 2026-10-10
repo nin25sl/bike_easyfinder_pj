@@ -28,18 +28,23 @@ final class SearchViewModelTests: XCTestCase {
     func testSuccessfulSearchTransitionsToLoaded() async {
         let expected = Array<TouringSpot>.demoSpots[0]
         let viewModel = SearchViewModel(
-            recommendationService: RecommendationServiceStub(result: .success([expected]))
+            recommendationService: RecommendationServiceStub(
+                result: .success(RecommendationResult(spots: [expected], warnings: ["範囲を拡張"]))
+            )
         )
 
         await viewModel.search(from: location)
 
         XCTAssertEqual(viewModel.resultState, .loaded)
         XCTAssertEqual(viewModel.spots, [expected])
+        XCTAssertEqual(viewModel.recommendationWarnings, ["範囲を拡張"])
     }
 
     func testEmptySearchTransitionsToEmptyAndClearsPreviousResults() async {
         let viewModel = SearchViewModel(
-            recommendationService: RecommendationServiceStub(result: .success([]))
+            recommendationService: RecommendationServiceStub(
+                result: .success(RecommendationResult(spots: [], warnings: []))
+            )
         )
 
         await viewModel.search(from: location)
@@ -61,13 +66,13 @@ final class SearchViewModelTests: XCTestCase {
 }
 
 private struct RecommendationServiceStub: RecommendationProviding {
-    let result: Result<[TouringSpot], Error>
+    let result: Result<RecommendationResult, Error>
 
     func recommendations(
         origin: CLLocationCoordinate2D,
         criteria: SearchCriteria,
         reactions: [UUID: SpotReaction]
-    ) async throws -> [TouringSpot] {
+    ) async throws -> RecommendationResult {
         try result.get()
     }
 }

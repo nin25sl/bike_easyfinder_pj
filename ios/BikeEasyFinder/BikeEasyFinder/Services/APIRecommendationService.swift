@@ -52,7 +52,7 @@ struct APIRecommendationService: RecommendationProviding {
         origin: CLLocationCoordinate2D,
         criteria: SearchCriteria,
         reactions: [UUID: SpotReaction]
-    ) async throws -> [TouringSpot] {
+    ) async throws -> RecommendationResult {
         guard CLLocationCoordinate2DIsValid(origin) else { throw RecommendationError.invalidOrigin }
         let body = RecommendationRequestDTO(
             origin: CoordinateDTO(latitude: origin.latitude, longitude: origin.longitude),
@@ -86,7 +86,10 @@ struct APIRecommendationService: RecommendationProviding {
         }
         do {
             let response = try decoder.decode(RecommendationResponseDTO.self, from: data)
-            return response.candidates.map { $0.spot(recommendationID: response.recommendationID) }
+            return RecommendationResult(
+                spots: response.candidates.map { $0.spot(recommendationID: response.recommendationID) },
+                warnings: response.warnings.map(\.message)
+            )
         } catch {
             throw APIRecommendationError.invalidResponse
         }
@@ -149,6 +152,12 @@ private struct CoordinateDTO: Codable {
 private struct RecommendationResponseDTO: Decodable {
     let recommendationID: UUID
     let candidates: [RecommendationCandidateDTO]
+    let warnings: [WarningDTO]
+}
+
+private struct WarningDTO: Decodable {
+    let code: String
+    let message: String
 }
 
 private struct RecommendationCandidateDTO: Decodable {

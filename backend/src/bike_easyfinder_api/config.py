@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     route_provider: Literal["approximate", "apple"] = "approximate"
     apple_maps_access_token: str | None = None
     apple_maps_directions_url: str = "https://maps-api.apple.com/v1/directions"
-    recommendation_rule_version: str = "mvp-1.1"
+    recommendation_rule_version: str = "mvp-1.2"
     data_version: str = "canonical-local"
     request_deadline_seconds: float = Field(default=4.0, gt=0, le=10)
     cors_origins: str = ""

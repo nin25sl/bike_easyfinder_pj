@@ -2,13 +2,12 @@ import hashlib
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
-from fastapi.testclient import TestClient
-
 from bike_easyfinder_api.config import Settings
 from bike_easyfinder_api.contracts import Coordinate
 from bike_easyfinder_api.main import create_app
 from bike_easyfinder_api.providers import ApproximateRouteProvider
 from bike_easyfinder_api.recommendation import RecommendationEngine, Spot
+from fastapi.testclient import TestClient
 
 
 class FakeRepository:
@@ -25,7 +24,7 @@ class FakeRepository:
                 category="coast",
                 tags=("sea", "scenic"),
                 coordinate=Coordinate(latitude=33.61, longitude=130.4),
-                stay_minutes=20,
+                stay_minutes=97,
                 confidence=0.9,
                 popularity_score=5,
                 verified_at=datetime.now(UTC),
@@ -63,6 +62,7 @@ def test_recommendation_endpoint() -> None:
     )
     assert response.status_code == 200
     assert response.json()["candidates"][0]["name"] == "海岸展望所"
+    assert abs(response.json()["candidates"][0]["estimated_total_minutes"] - 120) <= 15
     assert response.headers["x-request-id"]
 
 

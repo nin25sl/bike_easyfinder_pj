@@ -78,6 +78,7 @@ struct SearchView: View {
                 SpotDetailView(
                     spot: spot,
                     reaction: appState.reactions[id],
+                    locationService: locationService,
                     onReact: { _ = appState.react(to: spot, as: $0) },
                     onNavigate: { path.append(.navigation(id)) }
                 )

@@ -38,7 +38,18 @@ struct RecommendationCardView: View {
 
                         SpotHero(spot: spot)
                         TimeSummary(spot: spot)
+                        SpotMapView(spot: spot)
+                            .frame(height: 180)
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
                         ReasonBlock(reason: spot.recommendationReason)
+
+                        ForEach(viewModel.recommendationWarnings, id: \.self) { warning in
+                            StatusNotice(
+                                kind: .info,
+                                title: "検索範囲を広げました",
+                                message: warning
+                            )
+                        }
 
                         StatusNotice(
                             kind: .info,

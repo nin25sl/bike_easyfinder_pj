@@ -54,7 +54,7 @@ services:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-bike}:${POSTGRES_PASSWORD:-bike_local_only}@db:5432/${POSTGRES_DB:-bike_easyfinder}
       ROUTE_PROVIDER: ${ROUTE_PROVIDER:-approximate}
       APPLE_MAPS_ACCESS_TOKEN: ${APPLE_MAPS_ACCESS_TOKEN:-}
-      RECOMMENDATION_RULE_VERSION: ${RECOMMENDATION_RULE_VERSION:-mvp-1.1}
+      RECOMMENDATION_RULE_VERSION: ${RECOMMENDATION_RULE_VERSION:-mvp-1.2}
       DATA_VERSION: ${DATA_VERSION:-canonical-local}
     command: ["bike-api", "migrate"]
     depends_on:

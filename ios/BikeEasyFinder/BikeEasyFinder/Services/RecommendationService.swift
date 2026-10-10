@@ -1,12 +1,17 @@
 import CoreLocation
 import Foundation
 
+struct RecommendationResult: Equatable {
+    let spots: [TouringSpot]
+    let warnings: [String]
+}
+
 protocol RecommendationProviding {
     func recommendations(
         origin: CLLocationCoordinate2D,
         criteria: SearchCriteria,
         reactions: [UUID: SpotReaction]
-    ) async throws -> [TouringSpot]
+    ) async throws -> RecommendationResult
 }
 
 enum RecommendationError: LocalizedError, Equatable {
@@ -28,26 +33,44 @@ struct MockRecommendationService: RecommendationProviding {
         origin: CLLocationCoordinate2D,
         criteria: SearchCriteria,
         reactions: [UUID: SpotReaction]
-    ) async throws -> [TouringSpot] {
+    ) async throws -> RecommendationResult {
         guard CLLocationCoordinate2DIsValid(origin) else {
             throw RecommendationError.invalidOrigin
         }
 
         let usesAnyInterest = criteria.interests.contains(.any)
-        return Array(
-            spots
-                .filter { $0.estimatedTotalMinutes <= criteria.availableMinutes }
-                .filter { spot in
-                    usesAnyInterest || !spot.tags.isDisjoint(with: criteria.interests)
-                }
+        let matchingInterests = spots.filter { spot in
+            usesAnyInterest || !spot.tags.isDisjoint(with: criteria.interests)
+        }
+        var selected: [TouringSpot] = []
+        var appliedTolerance: Int?
+        for tolerance in stride(from: 15, through: 60, by: 15) {
+            selected = matchingInterests.filter {
+                abs($0.estimatedTotalMinutes - criteria.availableMinutes) <= tolerance
+            }
+            if !selected.isEmpty {
+                appliedTolerance = tolerance
+                break
+            }
+        }
+        let ranked = Array(
+            selected
                 .sorted {
-                    if $0.estimatedTotalMinutes == $1.estimatedTotalMinutes {
+                    let firstDifference = abs($0.estimatedTotalMinutes - criteria.availableMinutes)
+                    let secondDifference = abs($1.estimatedTotalMinutes - criteria.availableMinutes)
+                    if firstDifference == secondDifference {
                         return $0.id.uuidString < $1.id.uuidString
                     }
-                    return $0.estimatedTotalMinutes < $1.estimatedTotalMinutes
+                    return firstDifference < secondDifference
                 }
                 .prefix(5)
         )
+        let warnings = if let appliedTolerance, appliedTolerance > 15 {
+            ["指定時間±15分の候補がなかったため、±\(appliedTolerance)分まで範囲を広げました。"]
+        } else {
+            []
+        }
+        return RecommendationResult(spots: ranked, warnings: warnings)
     }
 }
 

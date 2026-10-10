@@ -14,6 +14,7 @@ final class SearchViewModel: ObservableObject {
     @Published var criteria = SearchCriteria()
     @Published private(set) var resultState: ResultState = .idle
     @Published private(set) var spots: [TouringSpot] = []
+    @Published private(set) var recommendationWarnings: [String] = []
     private var reactions: [UUID: SpotReaction] = [:]
 
     private let recommendationService: RecommendationProviding
@@ -37,6 +38,7 @@ final class SearchViewModel: ObservableObject {
     func resetResults() {
         resultState = .idle
         spots = []
+        recommendationWarnings = []
     }
 
     func toggleInterest(_ interest: SpotInterest) {
@@ -60,15 +62,17 @@ final class SearchViewModel: ObservableObject {
     func search(from location: CLLocation) async {
         resultState = .loading
         do {
-            let recommendations = try await recommendationService.recommendations(
+            let result = try await recommendationService.recommendations(
                 origin: location.coordinate,
                 criteria: criteria,
                 reactions: reactions
             )
-            spots = recommendations
-            resultState = recommendations.isEmpty ? .empty : .loaded
+            spots = result.spots
+            recommendationWarnings = result.warnings
+            resultState = result.spots.isEmpty ? .empty : .loaded
         } catch {
             spots = []
+            recommendationWarnings = []
             resultState = .failed(
                 (error as? LocalizedError)?.errorDescription
                     ?? "候補を取得できませんでした。もう一度お試しください。"

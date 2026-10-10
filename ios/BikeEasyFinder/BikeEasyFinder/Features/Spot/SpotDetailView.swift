@@ -3,6 +3,7 @@ import SwiftUI
 struct SpotDetailView: View {
     let spot: TouringSpot
     let reaction: SpotReaction?
+    @ObservedObject var locationService: LocationService
     let onReact: (SpotReaction) -> Void
     let onNavigate: () -> Void
 
@@ -18,9 +19,14 @@ struct SpotDetailView: View {
 
                 TimeSummary(spot: spot)
 
-                SpotMapView(spot: spot)
+                SpotMapView(
+                    spot: spot,
+                    origin: locationService.currentLocation?.coordinate
+                )
                     .frame(height: 240)
                     .clipShape(RoundedRectangle(cornerRadius: 14))
+
+                locationStatus
 
                 VStack(alignment: .leading, spacing: 12) {
                     Text("現地情報")
@@ -77,6 +83,13 @@ struct SpotDetailView: View {
         }
         .navigationTitle(spot.name)
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            locationService.discardCurrentLocation()
+            locationService.requestCurrentLocation()
+        }
+        .onDisappear {
+            locationService.discardCurrentLocation()
+        }
         .safeAreaInset(edge: .bottom) {
             PrimaryBottomAction(
                 title: "ここに行く",
@@ -87,6 +100,32 @@ struct SpotDetailView: View {
         .task(id: spot.id) {
             guard spot.isWeatherSensitive else { return }
             await weather.load(for: spot)
+        }
+    }
+
+    @ViewBuilder
+    private var locationStatus: some View {
+        switch locationService.state {
+        case .requestingPermission, .locating:
+            Label("現在地を取得しています…", systemImage: "location.circle")
+                .foregroundStyle(.secondary)
+        case .available:
+            Label("現在地と目的地を表示しています", systemImage: "location.fill")
+                .foregroundStyle(.secondary)
+        case .denied:
+            StatusNotice(
+                kind: .info,
+                title: "現在地を表示できません",
+                message: "位置情報の利用が許可されていないため、目的地のみ表示しています。"
+            )
+        case .failed(let message):
+            StatusNotice(
+                kind: .info,
+                title: "現在地を表示できません",
+                message: message + " 目的地のみ表示しています。"
+            )
+        case .idle:
+            EmptyView()
         }
     }
 
@@ -118,6 +157,7 @@ struct SpotDetailView: View {
         SpotDetailView(
             spot: Array<TouringSpot>.demoSpots[0],
             reaction: nil,
+            locationService: LocationService(),
             onReact: { _ in },
             onNavigate: {}
         )

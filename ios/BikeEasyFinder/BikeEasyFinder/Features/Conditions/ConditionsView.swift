@@ -23,7 +23,7 @@ struct ConditionsView: View {
                     StatusNotice(
                         kind: .info,
                         title: "条件に合う候補がありません",
-                        message: "使える時間、興味、高速道路の条件を変更してください。条件は自動では緩和しません。"
+                        message: "指定時間±60分まで探しました。使える時間、興味、高速道路の条件を変更してください。"
                     )
                 }
 
