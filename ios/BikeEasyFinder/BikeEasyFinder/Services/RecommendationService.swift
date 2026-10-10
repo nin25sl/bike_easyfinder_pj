@@ -4,7 +4,8 @@ import Foundation
 protocol RecommendationProviding {
     func recommendations(
         origin: CLLocationCoordinate2D,
-        criteria: SearchCriteria
+        criteria: SearchCriteria,
+        reactions: [UUID: SpotReaction]
     ) async throws -> [TouringSpot]
 }
 
@@ -25,7 +26,8 @@ struct MockRecommendationService: RecommendationProviding {
 
     func recommendations(
         origin: CLLocationCoordinate2D,
-        criteria: SearchCriteria
+        criteria: SearchCriteria,
+        reactions: [UUID: SpotReaction]
     ) async throws -> [TouringSpot] {
         guard CLLocationCoordinate2DIsValid(origin) else {
             throw RecommendationError.invalidOrigin

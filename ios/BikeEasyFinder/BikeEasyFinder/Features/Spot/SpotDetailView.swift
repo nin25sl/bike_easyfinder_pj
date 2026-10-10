@@ -6,6 +6,8 @@ struct SpotDetailView: View {
     let onReact: (SpotReaction) -> Void
     let onNavigate: () -> Void
 
+    @StateObject private var weather = SpotWeatherViewModel()
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
@@ -24,14 +26,15 @@ struct SpotDetailView: View {
                     Text("現地情報")
                         .font(.title3.bold())
                     Label(spot.motorcycleParkingNote, systemImage: "parkingsign.circle")
-                    Label("概算距離 \(spot.distanceKilometers, specifier: "%.0f")km", systemImage: "point.topleft.down.to.point.bottomright.curvepath")
+                    Label(
+                        "概算距離 \(spot.distanceKilometers, specifier: "%.0f")km",
+                        systemImage: "point.topleft.down.to.point.bottomright.curvepath"
+                    )
                 }
 
-                StatusNotice(
-                    kind: .warning,
-                    title: "天気情報を確認できません",
-                    message: "固定データ版ではWeatherKit未接続です。出発前に目的地の最新の天気を確認してください。"
-                )
+                if spot.isWeatherSensitive {
+                    weatherNotice
+                }
 
                 ReasonBlock(reason: spot.recommendationReason)
 
@@ -75,7 +78,37 @@ struct SpotDetailView: View {
         .navigationTitle(spot.name)
         .navigationBarTitleDisplayMode(.inline)
         .safeAreaInset(edge: .bottom) {
-            PrimaryBottomAction(title: "ここに行く", systemImage: "arrow.triangle.turn.up.right.diamond", action: onNavigate)
+            PrimaryBottomAction(
+                title: "ここに行く",
+                systemImage: "arrow.triangle.turn.up.right.diamond",
+                action: onNavigate
+            )
+        }
+        .task(id: spot.id) {
+            guard spot.isWeatherSensitive else { return }
+            await weather.load(for: spot)
+        }
+    }
+
+    @ViewBuilder
+    private var weatherNotice: some View {
+        switch weather.state {
+        case .loading:
+            StatusNotice(kind: .info, title: "目的地の天気を確認中", message: "しばらくお待ちください。")
+        case .ok(let message):
+            StatusNotice(kind: .info, title: "目的地の現在の天気", message: message)
+        case .warning(let message):
+            StatusNotice(
+                kind: .warning,
+                title: "天候に注意してください",
+                message: message + "。出発前に最新情報を確認してください。"
+            )
+        case .unavailable:
+            StatusNotice(
+                kind: .warning,
+                title: "天気情報を取得できませんでした",
+                message: "推薦はそのまま利用できます。出発前に目的地の最新の天気を確認してください。"
+            )
         }
     }
 }

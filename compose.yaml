@@ -45,5 +45,53 @@ services:
       - ./data_collection/output:/app/output
       - ./data_collection/cache:/app/cache
 
+  api-migrate:
+    build:
+      context: ./backend
+      target: runtime
+    environment: &api_environment
+      APP_ENV: ${APP_ENV:-local}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-bike}:${POSTGRES_PASSWORD:-bike_local_only}@db:5432/${POSTGRES_DB:-bike_easyfinder}
+      ROUTE_PROVIDER: ${ROUTE_PROVIDER:-approximate}
+      APPLE_MAPS_ACCESS_TOKEN: ${APPLE_MAPS_ACCESS_TOKEN:-}
+      RECOMMENDATION_RULE_VERSION: ${RECOMMENDATION_RULE_VERSION:-mvp-1.1}
+      DATA_VERSION: ${DATA_VERSION:-canonical-local}
+    command: ["bike-api", "migrate"]
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  api:
+    build:
+      context: ./backend
+      target: runtime
+    environment: *api_environment
+    ports:
+      - "${API_PORT:-8000}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      api-migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  api-test:
+    profiles: ["test"]
+    build:
+      context: ./backend
+      target: test
+    environment:
+      APP_ENV: test
+      DATABASE_URL: postgresql+psycopg://unused
+      OPENAPI_CONTRACT_PATH: /workspace/docs/bike_easyfinder_pj/SystemDesign/mvp-openapi-v1.yaml
+    volumes:
+      - ./docs:/workspace/docs:ro
+
 volumes:
   spot_data_pg:

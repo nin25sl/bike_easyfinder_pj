@@ -2,8 +2,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from collection_worker.contracts import NormalizedCandidate, ObservationInput, SpotObservation
-
+from collection_worker.contracts import (
+    NormalizedCandidate,
+    ObservationInput,
+    SpotObservation,
+)
 
 FIELD_DEFAULTS = {
     "business_status": "unknown",
@@ -28,12 +31,14 @@ def normalize_payload(payload: dict[str, Any], method: str = "source_native") ->
         "source_categories": source_categories,
         "features": features,
         "opening_hours_text": _string_or_none(payload.get("opening_hours_text")),
-        "business_status": payload.get("business_status", "unknown"),
-        "parking": payload.get("parking", "unknown"),
-        "motorcycle_access": payload.get("motorcycle_access", "unknown"),
-        "road_access": payload.get("road_access", "unknown"),
+        "business_status": _enum_value(payload.get("business_status"), {"open", "temporarily_closed", "permanently_closed", "unknown"}),
+        "parking": _parking_value(payload.get("parking")),
+        "motorcycle_access": _enum_value(payload.get("motorcycle_access"), {"allowed", "not_allowed", "unknown"}),
+        "road_access": _enum_value(payload.get("road_access"), {"accessible", "restricted", "unknown"}),
         "suggested_stay_minutes": _int_or_none(payload.get("suggested_stay_minutes")),
         "official_url": _string_or_none(payload.get("official_url")),
+        "touring_relevance": _float_or_none(payload.get("touring_relevance")),
+        "touring_reasons": _string_list(payload.get("touring_reasons")),
         "source_payload": payload.get("_source_payload") or payload.get("osm_tags"),
     }
     for field_name, value in values.items():
@@ -48,7 +53,10 @@ def normalize_payload(payload: dict[str, Any], method: str = "source_native") ->
                 confidence=0.9 if method in {"source_native", "manual"} else 0.7,
             )
         )
-    attribute_keys = {*FIELD_DEFAULTS.keys(), "opening_hours_text", "suggested_stay_minutes", "official_url"}
+    attribute_keys = {
+        *FIELD_DEFAULTS.keys(), "opening_hours_text", "suggested_stay_minutes", "official_url",
+        "touring_relevance", "touring_reasons",
+    }
     attributes = {key: values[key] for key in attribute_keys}
     return NormalizedCandidate(
         name=name,
@@ -98,3 +106,19 @@ def _string_list(value: Any) -> list[str]:
     if isinstance(value, str):
         return [part.strip() for part in value.split(",") if part.strip()]
     return [str(item).strip() for item in value if str(item).strip()]
+
+
+def _enum_value(value: Any, allowed: set[str]) -> str:
+    normalized = str(value or "unknown").strip().lower()
+    return normalized if normalized in allowed else "unknown"
+
+
+def _parking_value(value: Any) -> str:
+    normalized = str(value or "").strip().lower()
+    if normalized in {"available", "unavailable", "unknown"}:
+        return normalized
+    if not normalized:
+        return "unknown"
+    if any(token in normalized for token in ("なし", "無し", "無", "no parking")):
+        return "unavailable"
+    return "available"

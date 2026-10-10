@@ -1,0 +1,35 @@
+inventory_version: 2026-10-05
+policy: Only approved, machine-readable sources with confirmed reuse terms enter collection profiles.
+prefectures:
+  "40":
+    name: 福岡県
+    status: pending_license
+    note: Prefecture-wide tourism POI data has not been approved; use OSM PBF and reviewed seeds for the pilot.
+  "41":
+    name: 佐賀県
+    status: unavailable
+    note: No prefecture-wide coordinate-bearing tourism dataset has been approved.
+  "42":
+    name: 長崎県
+    status: approved
+    source_key: nagasaki_tourism_open_data
+    dataset: https://data.bodik.jp/dataset/420000_nagasakitabinet
+    license: CC-BY-4.0
+  "43":
+    name: 熊本県
+    status: approved
+    source_key: kumamoto_tourism_open_data
+    dataset: https://data.bodik.jp/dataset/430005_04
+    license: CC-BY-4.0
+  "44":
+    name: 大分県
+    status: unavailable
+    note: Relevant municipal or thematic datasets require individual review.
+  "45":
+    name: 宮崎県
+    status: unavailable
+    note: No prefecture-wide coordinate-bearing tourism dataset has been approved.
+  "46":
+    name: 鹿児島県
+    status: pending_license
+    note: Tourism-site analytics are not a reusable POI dataset; municipal datasets require review.

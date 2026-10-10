@@ -53,7 +53,10 @@ final class AppState: ObservableObject {
     @Published private(set) var reactions: [UUID: SpotReaction] = [:]
     @Published private(set) var savedSpots: [TouringSpot] = []
     @Published var analyticsEnabled = false {
-        didSet { defaults.set(analyticsEnabled, forKey: Keys.analyticsEnabled) }
+        didSet {
+            defaults.set(analyticsEnabled, forKey: Keys.analyticsEnabled)
+            if analyticsEnabled { analyticsClient.enable() }
+        }
     }
 
     private enum Keys {
@@ -63,6 +66,8 @@ final class AppState: ObservableObject {
     }
 
     private let defaults: UserDefaults
+    private let analyticsClient: AnonymousAnalyticsClient
+    private let analyticsSessionID = UUID()
     private let modelContainer: ModelContainer
     private let modelContext: ModelContext
     private let encoder = JSONEncoder()
@@ -71,9 +76,11 @@ final class AppState: ObservableObject {
 
     init(
         defaults: UserDefaults = .standard,
-        modelContainer: ModelContainer? = nil
+        modelContainer: ModelContainer? = nil,
+        analyticsClient: AnonymousAnalyticsClient = .live
     ) {
         self.defaults = defaults
+        self.analyticsClient = analyticsClient
         let resolvedContainer: ModelContainer
         if let modelContainer {
             resolvedContainer = modelContainer
@@ -124,6 +131,13 @@ final class AppState: ObservableObject {
         }
 
         upsertRecord(for: spot, reaction: reaction)
+        analyticsClient.enqueue(
+            eventType: reaction.apiEventType,
+            spot: spot,
+            sessionID: analyticsSessionID,
+            criteria: lastCriteria,
+            enabled: analyticsEnabled
+        )
         return previous
     }
 
@@ -172,6 +186,31 @@ final class AppState: ObservableObject {
 
     func clearAnonymousData() {
         analyticsEnabled = false
+        Task { await analyticsClient.requestDeletion() }
+    }
+
+    func recordShown(_ spots: [TouringSpot]) {
+        for spot in spots.prefix(5) {
+            recordAnalyticsEvent("shown", spot: spot)
+        }
+    }
+
+    func recordSelected(_ spot: TouringSpot) {
+        recordAnalyticsEvent("selected", spot: spot)
+    }
+
+    func recordRouteStarted(_ spot: TouringSpot) {
+        recordAnalyticsEvent("route_started", spot: spot)
+    }
+
+    private func recordAnalyticsEvent(_ eventType: String, spot: TouringSpot) {
+        analyticsClient.enqueue(
+            eventType: eventType,
+            spot: spot,
+            sessionID: analyticsSessionID,
+            criteria: lastCriteria,
+            enabled: analyticsEnabled
+        )
     }
 
     private func loadReactionRecords() {
@@ -226,5 +265,15 @@ final class AppState: ObservableObject {
         guard let record = reactionRecords.removeValue(forKey: spotID) else { return }
         modelContext.delete(record)
         try? modelContext.save()
+    }
+}
+
+private extension SpotReaction {
+    var apiEventType: String {
+        switch self {
+        case .interested: "interested"
+        case .notInterested: "not_interested"
+        case .visited: "visited"
+        }
     }
 }

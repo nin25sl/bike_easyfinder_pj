@@ -25,6 +25,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.bikeeasyfinder.app
         PRODUCT_NAME: BikeEasyFinder
         INFOPLIST_FILE: BikeEasyFinder/Resources/Info.plist
+        BIKE_API_BASE_URL: "http://127.0.0.1:8000"
+        CODE_SIGN_ENTITLEMENTS: BikeEasyFinder/BikeEasyFinder.entitlements
         TARGETED_DEVICE_FAMILY: "1"
         SUPPORTS_MACCATALYST: false
     scheme:

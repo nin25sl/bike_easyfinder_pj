@@ -28,7 +28,9 @@ class ManualSeedAdapter(SourceAdapter):
             else:
                 raise ConfigurationError(f"Unsupported manual seed format: {path}")
             for payload in records:
-                if payload.get("region_code") and str(payload["region_code"]) != region.region_code:
+                if payload.get("region_code") and not self._matches_region(
+                    str(payload["region_code"]), region
+                ):
                     continue
                 source_url = payload.get("source_url")
                 source_record_id = payload.get("source_record_id")
@@ -45,3 +47,8 @@ class ManualSeedAdapter(SourceAdapter):
                 if limit is not None and emitted >= limit:
                     return
 
+    @staticmethod
+    def _matches_region(record_region_code: str, region: Region) -> bool:
+        if region.region_kind == "prefecture":
+            return record_region_code.startswith(region.prefecture_code)
+        return record_region_code == region.region_code

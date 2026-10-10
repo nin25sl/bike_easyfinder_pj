@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Procedure/apple-maps-server-api-poc-execution-procedure-v1.md",
+                "file": "Procedure/iphone-device-local-canonical-data-runbook-v1.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "apple-maps-server-api-poc-execution-procedure-v1"
+              "title": "iphone-device-local-canonical-data-runbook-v1"
             }
           }
         ]
@@ -190,6 +190,7 @@
   },
   "active": "6efec5fb17ba1e03",
   "lastOpenFiles": [
+    "Procedure/apple-maps-server-api-poc-execution-procedure-v1.md",
     "tasks/tasks.md",
     "tasks/sc-mvp-ui-design-proposal-v1-task.md",
     "tasks/sc-mvp-detailed-design-v1-task.md",
@@ -198,7 +199,6 @@
     "Test",
     "SystemDesign/privacy-policy-draft-v1.md",
     "SystemDesign/mvp-ui-design-proposal-v1.md",
-    "Procedure/apple-maps-server-api-poc-execution-procedure-v1.md",
     "NewPlanning/tasks/np-subscription-plan-v1-task.md",
     "NewPlanning/tasks",
     "NewPlanning/subscription-plan-v1.md",

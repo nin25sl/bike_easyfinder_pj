@@ -30,6 +30,8 @@ class SpotObservation(BaseModel):
     road_access: Literal["accessible", "restricted", "unknown"]
     suggested_stay_minutes: int | None = Field(ge=0)
     official_url: str | None
+    touring_relevance: float | None = Field(default=None, ge=0, le=1)
+    touring_reasons: list[str] = Field(default_factory=list)
     evidence: list[Evidence]
 
 
@@ -49,6 +51,14 @@ class DiscoveredRecord(BaseModel):
     title: str | None = None
 
 
+class DiscoveryPage(BaseModel):
+    """A durable adapter boundary used by checkpoint-aware collection runs."""
+
+    records: list[DiscoveredRecord] = Field(default_factory=list)
+    checkpoint: dict[str, Any] = Field(default_factory=dict)
+    complete: bool = False
+
+
 class Region(BaseModel):
     id: str
     region_code: str
@@ -58,6 +68,7 @@ class Region(BaseModel):
     parent_region_code: str | None
     dataset_version: str
     bbox: tuple[float, float, float, float]
+    geometry_wkb: bytes | None = None
 
 
 class ObservationInput(BaseModel):
@@ -68,6 +79,7 @@ class ObservationInput(BaseModel):
     confidence: float = Field(ge=0, le=1)
     evidence_excerpt: str | None = None
     observed_at: datetime | None = None
+    rule_version: str | None = None
 
 
 class NormalizedCandidate(BaseModel):
@@ -84,4 +96,3 @@ class NormalizedCandidate(BaseModel):
 class DiscoveryCitation(BaseModel):
     url: HttpUrl
     title: str
-

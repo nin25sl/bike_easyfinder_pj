@@ -20,6 +20,13 @@
     <string>1</string>
     <key>LSRequiresIPhoneOS</key>
     <true/>
+    <key>BikeAPIBaseURL</key>
+    <string>$(BIKE_API_BASE_URL)</string>
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsLocalNetworking</key>
+        <true/>
+    </dict>
     <key>NSLocationWhenInUseUsageDescription</key>
     <string>現在地から、利用可能時間内に往復できるツーリング先を提案するために使用します。</string>
     <key>UIApplicationSceneManifest</key>
@@ -35,4 +42,3 @@
     </array>
 </dict>
 </plist>
-

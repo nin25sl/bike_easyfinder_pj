@@ -19,6 +19,10 @@ class CollectionConfig(BaseModel):
     duplicate_distance_meters: int = Field(default=100, gt=0)
     duplicate_name_similarity: float = Field(default=0.8, ge=0, le=1)
     max_response_bytes: int = Field(default=10_485_760, gt=0)
+    max_item_attempts: int = Field(default=3, gt=0, le=20)
+    entity_resolution_rule_version: str = "entity-resolution-v1"
+    field_selection_rule_version: str = "field-selection-v1"
+    touring_relevance_rule_version: str = "touring-relevance-v1"
 
 
 class OpenAIConfig(BaseModel):
@@ -49,6 +53,8 @@ class SourceConfig(BaseModel):
         "osm_pbf",
         "public_open_data",
         "official_web",
+        "general_web",
+        "touring_media",
         "openai_web_discovery",
         "manual_seed",
     ]
@@ -63,7 +69,16 @@ class SourceConfig(BaseModel):
     request_timeout_seconds: int = Field(gt=0)
     max_pages_per_run: int = Field(gt=0)
     refresh_interval_days: int | None = Field(default=None, gt=0)
+    region_codes: list[str] = Field(default_factory=list)
     config: dict[str, Any] = Field(default_factory=dict)
+
+
+class CollectionProfile(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    sources: list[str]
+    run_resolution: bool = True
+    run_field_selection: bool = True
 
 
 class Settings(BaseModel):
@@ -72,6 +87,8 @@ class Settings(BaseModel):
     collection: CollectionConfig
     openai: OpenAIConfig
     sources: dict[str, SourceConfig]
+    region_groups: dict[str, list[str]] = Field(default_factory=dict)
+    profiles: dict[str, CollectionProfile] = Field(default_factory=dict)
     database_url: str
     output_dir: Path
     cache_dir: Path

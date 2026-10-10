@@ -21,7 +21,6 @@ from collection_worker.errors import ConfigurationError
 from collection_worker.logging import emit
 from collection_worker.utils import validate_local_government_code
 
-
 MAX_ARCHIVE_MEMBER_BYTES = 500 * 1024 * 1024
 SHAPEFILE_COMPONENT_SUFFIXES = {
     ".cpg",
@@ -184,7 +183,8 @@ def sync_regions(
     valid_from = date.fromisoformat(str(source.config.get("valid_from", "2023-01-01")))
     data_file, temporary = _dataset_file(settings, input_path)
     try:
-        frame = pyogrio.read_dataframe(data_file)
+        read_options = {"encoding": "CP932"} if data_file.suffix.lower() == ".shp" else {}
+        frame = pyogrio.read_dataframe(data_file, **read_options)
         rows = list(_region_rows(frame, version, valid_from))
         source_id = str(uuid.uuid5(uuid.NAMESPACE_URL, "source:n03"))
         statement = text(
@@ -237,7 +237,7 @@ def resolve_region(engine: Engine, code: str) -> Region:
     query = text(
         """
         SELECT id::text, region_code, region_kind, name_ja, prefecture_code,
-               parent_region_code, dataset_version,
+               parent_region_code, dataset_version, ST_AsBinary(geometry) AS geometry_wkb,
                ST_XMin(Box2D(geometry)) AS min_x,
                ST_YMin(Box2D(geometry)) AS min_y,
                ST_XMax(Box2D(geometry)) AS max_x,
@@ -261,4 +261,5 @@ def resolve_region(engine: Engine, code: str) -> Region:
         parent_region_code=row["parent_region_code"],
         dataset_version=row["dataset_version"],
         bbox=(row["min_x"], row["min_y"], row["max_x"], row["max_y"]),
+        geometry_wkb=bytes(row["geometry_wkb"]),
     )

@@ -22,7 +22,10 @@ struct SearchView: View {
                     HomeView(
                         appState: appState,
                         onStartWithPrevious: startWithPreviousCriteria,
-                        onChangeConditions: { path.append(.conditions(autoStart: false)) },
+                        onChangeConditions: {
+                            viewModel.useReactions(appState.reactions)
+                            path.append(.conditions(autoStart: false))
+                        },
                         onShowInterested: { path.append(.interested) },
                         onShowSettings: { path.append(.settings) }
                     )
@@ -30,6 +33,7 @@ struct SearchView: View {
                     OnboardingView {
                         appState.completeOnboarding()
                         viewModel.useCriteria(SearchCriteria())
+                        viewModel.useReactions(appState.reactions)
                         path = [.conditions(autoStart: false)]
                     }
                 }
@@ -51,15 +55,22 @@ struct SearchView: View {
                 autoStart: autoStart
             ) {
                 appState.saveCriteria(viewModel.criteria)
+                appState.recordShown(viewModel.spots)
                 path.append(.recommendations)
             }
         case .recommendations:
             RecommendationCardView(
                 viewModel: viewModel,
                 appState: appState,
-                onShowDetail: { path.append(.detail($0.id)) },
+                onShowDetail: {
+                    appState.recordSelected($0)
+                    path.append(.detail($0.id))
+                },
                 onShowInterested: { path.append(.interested) },
-                onChangeConditions: { path.append(.conditions(autoStart: false)) },
+                onChangeConditions: {
+                    viewModel.useReactions(appState.reactions)
+                    path.append(.conditions(autoStart: false))
+                },
                 onTryAgain: { path.append(.conditions(autoStart: true)) }
             )
         case .detail(let id):
@@ -81,7 +92,10 @@ struct SearchView: View {
             )
         case .navigation(let id):
             if let spot = spot(withID: id) {
-                NavigationConfirmationView(spot: spot)
+                NavigationConfirmationView(
+                    spot: spot,
+                    onRouteStarted: { appState.recordRouteStarted(spot) }
+                )
             } else {
                 ContentUnavailableView("目的地を表示できません", systemImage: "map")
             }
@@ -92,6 +106,7 @@ struct SearchView: View {
 
     private func startWithPreviousCriteria() {
         viewModel.useCriteria(appState.lastCriteria ?? SearchCriteria())
+        viewModel.useReactions(appState.reactions)
         path.append(.conditions(autoStart: true))
     }
 

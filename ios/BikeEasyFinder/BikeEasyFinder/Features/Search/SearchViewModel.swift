@@ -14,10 +14,11 @@ final class SearchViewModel: ObservableObject {
     @Published var criteria = SearchCriteria()
     @Published private(set) var resultState: ResultState = .idle
     @Published private(set) var spots: [TouringSpot] = []
+    private var reactions: [UUID: SpotReaction] = [:]
 
     private let recommendationService: RecommendationProviding
 
-    init(recommendationService: RecommendationProviding = MockRecommendationService()) {
+    init(recommendationService: RecommendationProviding = APIRecommendationService.live) {
         self.recommendationService = recommendationService
     }
 
@@ -27,6 +28,10 @@ final class SearchViewModel: ObservableObject {
 
     func useCriteria(_ criteria: SearchCriteria) {
         self.criteria = criteria
+    }
+
+    func useReactions(_ reactions: [UUID: SpotReaction]) {
+        self.reactions = reactions
     }
 
     func resetResults() {
@@ -57,7 +62,8 @@ final class SearchViewModel: ObservableObject {
         do {
             let recommendations = try await recommendationService.recommendations(
                 origin: location.coordinate,
-                criteria: criteria
+                criteria: criteria,
+                reactions: reactions
             )
             spots = recommendations
             resultState = recommendations.isEmpty ? .empty : .loaded

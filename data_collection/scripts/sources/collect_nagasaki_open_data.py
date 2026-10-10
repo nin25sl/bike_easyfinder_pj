@@ -1,0 +1,4 @@
+from _runner import run
+
+if __name__ == "__main__":
+    run("nagasaki_tourism_open_data")

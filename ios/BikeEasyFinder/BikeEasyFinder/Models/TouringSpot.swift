@@ -13,6 +13,7 @@ struct TouringSpot: Codable, Identifiable, Equatable {
     let stayMinutes: Int
     let distanceKilometers: Double
     let recommendationReason: String
+    var recommendationID: UUID? = nil
     var verifiedAt: Date = Date(timeIntervalSince1970: 1_788_566_400)
     var sourceLabel: String = "公開情報・現地確認"
     var motorcycleParkingNote: String = "二輪駐車場所は現地の案内を確認してください"
@@ -25,6 +26,10 @@ struct TouringSpot: Codable, Identifiable, Equatable {
 
     var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+    }
+
+    var isWeatherSensitive: Bool {
+        !tags.isDisjoint(with: [.sea, .mountain, .scenic, .winding, .nightView])
     }
 
     var estimatedTotalMinutes: Int {

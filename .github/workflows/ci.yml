@@ -1,0 +1,75 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  python-tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_DB: bike_easyfinder
+          POSTGRES_USER: bike
+          POSTGRES_PASSWORD: bike_ci
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U bike -d bike_easyfinder"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql+psycopg://bike:bike_ci@localhost:5432/bike_easyfinder
+      APP_ENV: test
+      RUN_DB_INTEGRATION: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install data collection
+        run: pip install -e "./data_collection[test]"
+      - name: Upgrade collection schema
+        run: python -m collection_worker db migrate
+      - name: Test data collection
+        run: pytest data_collection/tests -q --basetemp .pytest-tmp/ci-collection
+      - name: Install API
+        run: pip install -e "./backend[test]"
+      - name: Upgrade API schema from empty database
+        working-directory: backend
+        run: alembic upgrade head
+      - name: Test API
+        run: pytest backend/tests -q --basetemp .pytest-tmp/ci-api
+      - name: Verify migration head
+        working-directory: backend
+        run: alembic current --check-heads
+
+  container-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build worker and API images
+        run: docker compose build worker api api-migrate
+
+  ios-tests:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate project
+        working-directory: ios/BikeEasyFinder
+        run: xcodegen generate
+      - name: Build and test
+        working-directory: ios/BikeEasyFinder
+        run: >-
+          xcodebuild test
+          -project BikeEasyFinder.xcodeproj
+          -scheme BikeEasyFinder
+          -sdk iphonesimulator
+          -destination 'platform=iOS Simulator,name=iPhone 16 Pro'
+          CODE_SIGNING_ALLOWED=NO

@@ -1,0 +1,14 @@
+[
+  {"name_similarity": 0.95, "distance_m": 30, "address_match": true, "url_match": false, "category_match": false, "same_source": false, "expected": "merge"},
+  {"name_similarity": 0.91, "distance_m": 80, "address_match": true, "url_match": false, "category_match": true, "same_source": false, "expected": "merge"},
+  {"name_similarity": 0.85, "distance_m": 40, "address_match": true, "url_match": false, "category_match": false, "same_source": false, "expected": "merge"},
+  {"name_similarity": 0.95, "distance_m": 40, "address_match": false, "url_match": true, "category_match": false, "same_source": false, "expected": "merge"},
+  {"name_similarity": 0.91, "distance_m": 90, "address_match": false, "url_match": false, "category_match": false, "same_source": false, "expected": "review"},
+  {"name_similarity": 0.83, "distance_m": 90, "address_match": false, "url_match": true, "category_match": false, "same_source": false, "expected": "review"},
+  {"name_similarity": 0.82, "distance_m": 200, "address_match": true, "url_match": false, "category_match": false, "same_source": false, "expected": "review"},
+  {"name_similarity": 0.95, "distance_m": 20, "address_match": true, "url_match": true, "category_match": true, "same_source": true, "expected": "review"},
+  {"name_similarity": 0.95, "distance_m": 400, "address_match": false, "url_match": true, "category_match": false, "same_source": false, "expected": "separate"},
+  {"name_similarity": 0.81, "distance_m": 240, "address_match": false, "url_match": false, "category_match": false, "same_source": false, "expected": "separate"},
+  {"name_similarity": 0.70, "distance_m": 40, "address_match": false, "url_match": false, "category_match": false, "same_source": false, "expected": "separate"},
+  {"name_similarity": 0.00, "distance_m": null, "address_match": false, "url_match": true, "category_match": false, "same_source": false, "expected": "separate"}
+]

@@ -3,6 +3,7 @@ import UIKit
 
 struct NavigationConfirmationView: View {
     let spot: TouringSpot
+    let onRouteStarted: () -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var isOpeningMaps = false
@@ -71,5 +72,6 @@ struct NavigationConfirmationView: View {
         let success = navigationService.openInAppleMaps(spot)
         isOpeningMaps = false
         showNavigationFailure = !success
+        if success { onRouteStarted() }
     }
 }

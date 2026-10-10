@@ -5,7 +5,6 @@ from sqlalchemy import Engine, text
 from collection_worker.config import Settings
 from collection_worker.repository import Repository
 
-
 BLOCKING_REASONS = {
     "LICENSE_UNKNOWN",
     "LOCATION_MISSING",
@@ -89,6 +88,17 @@ def assess_candidate(engine: Engine, repository: Repository, candidate_id: str, 
             ),
             {"id": candidate_id, "status": status, "score": min(score, 100), "count": int(row["source_count"] or 0)},
         )
+        if rejected:
+            connection.execute(
+                text(
+                    """
+                    UPDATE review_tasks SET status='resolved', reviewed_at=now(),
+                        decision_note='Candidate rejected by automatic quality assessment'
+                    WHERE candidate_id=:id AND status='open'
+                    """
+                ),
+                {"id": candidate_id},
+            )
     return status
 
 
@@ -116,10 +126,16 @@ def flag_duplicates(engine: Engine, repository: Repository, region_id: str, sett
                 FROM spot_candidates a
                 JOIN spot_candidates b ON a.region_id=b.region_id AND a.id < b.id
                 WHERE a.region_id=:region_id
+                  AND a.status <> 'rejected' AND b.status <> 'rejected'
                   AND a.location IS NOT NULL AND b.location IS NOT NULL
                   AND a.normalized_name IS NOT NULL AND b.normalized_name IS NOT NULL
                   AND ST_DWithin(a.location, b.location, :distance)
                   AND similarity(a.normalized_name, b.normalized_name) >= :similarity
+                  AND NOT EXISTS (
+                      SELECT 1 FROM spot_entity_memberships am
+                      JOIN spot_entity_memberships bm ON bm.entity_id=am.entity_id
+                      WHERE am.candidate_id=a.id AND bm.candidate_id=b.id
+                  )
                 """
             ),
             {

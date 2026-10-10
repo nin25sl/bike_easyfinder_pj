@@ -5,6 +5,10 @@ collection:
   duplicate_distance_meters: 100
   duplicate_name_similarity: 0.8
   max_response_bytes: 10485760
+  max_item_attempts: 3
+  entity_resolution_rule_version: entity-resolution-v1
+  field_selection_rule_version: field-selection-v1
+  touring_relevance_rule_version: touring-relevance-v1
 
 openai:
   discovery_model: gpt-6-astra
@@ -138,10 +142,242 @@ sources:
     terms_url: https://www.openstreetmap.org/copyright
     attribution_text: © OpenStreetMap contributors
     raw_storage_policy: full_allowed
-    base_url: null
+    base_url: https://download.geofabrik.de/asia/japan/kyushu-latest.osm.pbf
     rate_limit_per_minute: 1
     request_timeout_seconds: 600
     max_pages_per_run: 1
     refresh_interval_days: 30
     config:
       extract_path: null
+      extract_url: https://download.geofabrik.de/asia/japan/kyushu-latest.osm.pbf
+      user_agent: "BikeEasyFinder/0.1 (spot collection; contact: mailto:nakamuback.s@gmail.com)"
+
+  nagasaki_tourism_open_data:
+    source_type: public_open_data
+    approval_status: approved
+    license_status: verified
+    license_name: Creative Commons Attribution 4.0 International
+    terms_url: https://creativecommons.org/licenses/by/4.0/
+    attribution_text: 長崎県観光連盟「ながさき旅ネット 観光スポット情報」
+    raw_storage_policy: full_allowed
+    base_url: https://data.bodik.jp/
+    rate_limit_per_minute: 6
+    request_timeout_seconds: 120
+    max_pages_per_run: 1
+    refresh_interval_days: 30
+    region_codes: ["42"]
+    config:
+      datasets:
+        - dataset_id: nagasaki-tabinet-standard-20230320
+          url: https://data.bodik.jp/dataset/e4cf571c-d22b-44f1-a5d8-8c92bcd6c11e/resource/e3907cf2-f9f0-4bb5-b94c-ea6f4abe460b/download/420000_tourism_nagasakitabinet.csv
+          format: csv
+          encoding: utf-8-sig
+          updated_at: "2023-03-20"
+          region_codes: ["42"]
+          id_fields: ["都道府県コード又は市区町村コード", "NO"]
+          expected_columns: ["名称", "緯度", "経度"]
+          mapping:
+            name: "名称"
+            address: "住所"
+            latitude: "緯度"
+            longitude: "経度"
+            opening_hours_text: "利用可能日時特記事項"
+            parking: "駐車場情報"
+            official_url: "URL"
+
+  kumamoto_tourism_open_data:
+    source_type: public_open_data
+    approval_status: approved
+    license_status: verified
+    license_name: Creative Commons Attribution 4.0 International
+    terms_url: https://creativecommons.org/licenses/by/4.0/
+    attribution_text: 熊本県「熊本県観光施設一覧」
+    raw_storage_policy: full_allowed
+    base_url: https://data.bodik.jp/
+    rate_limit_per_minute: 6
+    request_timeout_seconds: 120
+    max_pages_per_run: 1
+    refresh_interval_days: 30
+    region_codes: ["43"]
+    config:
+      datasets:
+        - dataset_id: kumamoto-tourism-cdf25cc0
+          url: https://data.bodik.jp/datastore/dump/cdf25cc0-06e0-40e6-a632-cfd67e40524b?format=csv
+          format: csv
+          encoding: utf-8-sig
+          updated_at: "2022-12-19"
+          region_codes: ["43"]
+          id_fields: ["都道府県コード又は市区町村コード", "NO"]
+          expected_columns: ["名称", "緯度", "経度"]
+          mapping:
+            name: "名称"
+            address: "住所"
+            latitude: "緯度"
+            longitude: "経度"
+            opening_hours_text: "利用可能日時特記事項"
+            parking: "駐車場情報"
+            official_url: "URL"
+
+  fukuoka_official_tourism:
+    source_type: official_web
+    approval_status: pending_review
+    license_status: unknown
+    raw_storage_policy: facts_only
+    base_url: https://www.crossroadfukuoka.jp/
+    rate_limit_per_minute: 1
+    request_timeout_seconds: 60
+    max_pages_per_run: 5
+    refresh_interval_days: 30
+    region_codes: ["40"]
+    config:
+      robots_required: true
+      ai_extract: true
+      pages: [{url: https://www.crossroadfukuoka.jp/spot, region_codes: ["40"]}]
+
+  saga_official_tourism:
+    source_type: official_web
+    approval_status: pending_review
+    license_status: unknown
+    raw_storage_policy: facts_only
+    base_url: https://www.asobo-saga.jp/
+    rate_limit_per_minute: 1
+    request_timeout_seconds: 60
+    max_pages_per_run: 5
+    refresh_interval_days: 30
+    region_codes: ["41"]
+    config:
+      robots_required: true
+      ai_extract: true
+      pages: [{url: https://www.asobo-saga.jp/spots/, region_codes: ["41"]}]
+
+  nagasaki_official_tourism:
+    source_type: official_web
+    approval_status: pending_review
+    license_status: unknown
+    raw_storage_policy: facts_only
+    base_url: https://www.nagasaki-tabinet.com/
+    rate_limit_per_minute: 1
+    request_timeout_seconds: 60
+    max_pages_per_run: 5
+    refresh_interval_days: 30
+    region_codes: ["42"]
+    config:
+      robots_required: true
+      ai_extract: true
+      pages: [{url: https://www.nagasaki-tabinet.com/guide, region_codes: ["42"]}]
+
+  kumamoto_official_tourism:
+    source_type: official_web
+    approval_status: pending_review
+    license_status: unknown
+    raw_storage_policy: facts_only
+    base_url: https://kumamoto.guide/
+    rate_limit_per_minute: 1
+    request_timeout_seconds: 60
+    max_pages_per_run: 5
+    refresh_interval_days: 30
+    region_codes: ["43"]
+    config:
+      robots_required: true
+      ai_extract: true
+      pages: [{url: https://kumamoto.guide/spots, region_codes: ["43"]}]
+
+  oita_official_tourism:
+    source_type: official_web
+    approval_status: pending_review
+    license_status: unknown
+    raw_storage_policy: facts_only
+    base_url: https://www.visit-oita.jp/
+    rate_limit_per_minute: 1
+    request_timeout_seconds: 60
+    max_pages_per_run: 5
+    refresh_interval_days: 30
+    region_codes: ["44"]
+    config:
+      robots_required: true
+      ai_extract: true
+      pages: [{url: https://www.visit-oita.jp/spots/lists, region_codes: ["44"]}]
+
+  miyazaki_official_tourism:
+    source_type: official_web
+    approval_status: pending_review
+    license_status: unknown
+    raw_storage_policy: facts_only
+    base_url: https://www.kanko-miyazaki.jp/
+    rate_limit_per_minute: 1
+    request_timeout_seconds: 60
+    max_pages_per_run: 5
+    refresh_interval_days: 30
+    region_codes: ["45"]
+    config:
+      robots_required: true
+      ai_extract: true
+      pages: [{url: https://www.kanko-miyazaki.jp/spot, region_codes: ["45"]}]
+
+  kagoshima_official_tourism:
+    source_type: official_web
+    approval_status: pending_review
+    license_status: unknown
+    raw_storage_policy: facts_only
+    base_url: https://www.kagoshima-kankou.com/
+    rate_limit_per_minute: 1
+    request_timeout_seconds: 60
+    max_pages_per_run: 5
+    refresh_interval_days: 30
+    region_codes: ["46"]
+    config:
+      robots_required: true
+      ai_extract: true
+      pages: [{url: https://www.kagoshima-kankou.com/guide, region_codes: ["46"]}]
+
+  hondago_touring:
+    source_type: touring_media
+    approval_status: pending_review
+    license_status: unknown
+    license_name: null
+    terms_url: null
+    attribution_text: null
+    raw_storage_policy: metadata_only
+    base_url: https://hondago-bikerental.jp/
+    rate_limit_per_minute: 1
+    request_timeout_seconds: 60
+    max_pages_per_run: 10
+    refresh_interval_days: 30
+    region_codes: ["40", "41", "42", "43", "44", "45", "46"]
+    config:
+      robots_required: true
+      ai_extract: true
+      pages: []
+
+  webike_touring:
+    source_type: touring_media
+    approval_status: pending_review
+    license_status: unknown
+    license_name: null
+    terms_url: null
+    attribution_text: null
+    raw_storage_policy: metadata_only
+    base_url: https://news.webike.net/
+    rate_limit_per_minute: 1
+    request_timeout_seconds: 60
+    max_pages_per_run: 10
+    refresh_interval_days: 30
+    region_codes: ["40", "41", "42", "43", "44", "45", "46"]
+    config:
+      robots_required: true
+      ai_extract: true
+      pages: []
+
+region_groups:
+  fukuoka: ["40"]
+  kyushu: ["40", "41", "42", "43", "44", "45", "46"]
+
+profiles:
+  fukuoka-pilot:
+    sources: [osm_pbf, fukuoka_codex_reviewed]
+    run_resolution: true
+    run_field_selection: true
+  kyushu-p0:
+    sources: [osm_pbf, nagasaki_tourism_open_data, kumamoto_tourism_open_data]
+    run_resolution: true
+    run_field_selection: true

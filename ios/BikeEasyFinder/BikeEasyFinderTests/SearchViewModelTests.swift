@@ -65,7 +65,8 @@ private struct RecommendationServiceStub: RecommendationProviding {
 
     func recommendations(
         origin: CLLocationCoordinate2D,
-        criteria: SearchCriteria
+        criteria: SearchCriteria,
+        reactions: [UUID: SpotReaction]
     ) async throws -> [TouringSpot] {
         try result.get()
     }

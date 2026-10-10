@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osm version="0.6" generator="bike-easyfinder-test">
+  <node id="1" lat="33.5000" lon="130.4000" version="1">
+    <tag k="name" v="Test Viewpoint"/>
+    <tag k="tourism" v="viewpoint"/>
+  </node>
+  <node id="2" lat="35.0000" lon="135.0000" version="1">
+    <tag k="name" v="Outside Cafe"/>
+    <tag k="amenity" v="cafe"/>
+  </node>
+  <node id="3" lat="33.5100" lon="130.4100" version="1"/>
+  <node id="4" lat="33.5200" lon="130.4200" version="1"/>
+  <node id="5" lat="33.5300" lon="130.4300" version="1"/>
+  <node id="6" lat="33.5300" lon="130.4400" version="1"/>
+  <node id="7" lat="33.5400" lon="130.4400" version="1"/>
+  <node id="8" lat="33.5400" lon="130.4300" version="1"/>
+  <way id="10" version="1">
+    <nd ref="3"/>
+    <nd ref="4"/>
+    <tag k="name" v="Test Park"/>
+    <tag k="leisure" v="park"/>
+  </way>
+  <way id="11" version="1">
+    <nd ref="5"/>
+    <nd ref="6"/>
+    <nd ref="7"/>
+    <nd ref="8"/>
+    <nd ref="5"/>
+    <tag k="name" v="Test Area"/>
+    <tag k="tourism" v="attraction"/>
+    <tag k="area" v="yes"/>
+  </way>
+  <relation id="20" version="1">
+    <tag k="name" v="Test Relation"/>
+    <tag k="historic" v="castle"/>
+  </relation>
+</osm>

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bike-easyfinder.local/schemas/resolved-spot-v1.json",
+  "title": "Resolved Spot v1",
+  "type": "object",
+  "required": ["schema_version", "entity_id", "entity_key", "status", "region", "selected_fields", "members", "sources"],
+  "properties": {
+    "schema_version": {"const": "resolved-spot-v1"},
+    "entity_id": {"type": "string", "format": "uuid"},
+    "entity_key": {"type": "string"},
+    "status": {"enum": ["draft", "ready", "review_required", "rejected"]},
+    "quality_score": {"type": "number", "minimum": 0, "maximum": 100},
+    "region": {"type": "object"},
+    "selected_fields": {"type": "object"},
+    "members": {"type": "array"},
+    "sources": {"type": "array"}
+  },
+  "additionalProperties": false
+}
