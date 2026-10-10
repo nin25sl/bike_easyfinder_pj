@@ -36,14 +36,14 @@ jobs:
       - name: Upgrade collection schema
         run: python -m collection_worker db migrate
       - name: Test data collection
-        run: pytest data_collection/tests -q --basetemp .pytest-tmp/ci-collection
+        run: pytest data_collection/tests -q --basetemp "${RUNNER_TEMP}/pytest-collection"
       - name: Install API
         run: pip install -e "./backend[test]"
       - name: Upgrade API schema from empty database
         working-directory: backend
         run: alembic upgrade head
       - name: Test API
-        run: pytest backend/tests -q --basetemp .pytest-tmp/ci-api
+        run: pytest backend/tests -q --basetemp "${RUNNER_TEMP}/pytest-api"
       - name: Verify migration head
         working-directory: backend
         run: alembic current --check-heads
@@ -66,10 +66,18 @@ jobs:
         run: xcodegen generate
       - name: Build and test
         working-directory: ios/BikeEasyFinder
-        run: >-
-          xcodebuild test
-          -project BikeEasyFinder.xcodeproj
-          -scheme BikeEasyFinder
-          -sdk iphonesimulator
-          -destination 'platform=iOS Simulator,name=iPhone 16 Pro'
-          CODE_SIGNING_ALLOWED=NO
+        run: |
+          SIMULATOR_UDID="$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          iphones = [device for runtime in devices.values() for device in runtime if device["name"].startswith("iPhone")]
+          if not iphones:
+              raise SystemExit("No available iPhone simulator found")
+          print(iphones[0]["udid"])
+          ')"
+          xcodebuild test \
+            -project BikeEasyFinder.xcodeproj \
+            -scheme BikeEasyFinder \
+            -sdk iphonesimulator \
+            -destination "platform=iOS Simulator,id=${SIMULATOR_UDID}" \
+            CODE_SIGNING_ALLOWED=NO
