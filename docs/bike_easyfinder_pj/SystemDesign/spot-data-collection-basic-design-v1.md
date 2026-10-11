@@ -1,7 +1,7 @@
 ---
 title: Spotデータ収集機構 基本設計書 v1
 published: 2026-09-23
-updated: 2026-10-10
+updated: 2026-10-11
 description: 全国の都道府県・市区町村を指定してSpot原情報を継続収集するWorker、データ、AI連携、運用の基本設計
 tags: [mvp, data-collection, postgis, openstreetmap, openai, worker, SC]
 category: SystemDesign
@@ -51,19 +51,21 @@ draft: true
 - ユーザー行動イベント
 - OSM道路ネットワークとRouting用グラフ
 - Canonical Spotの自動生成・公開
-- Google Places、画像収集、UGC
+- Google Places、Wikimedia Commons以外からの画像収集、UGC
 - 人間レビュー用の管理画面
 - クラウド基盤とクラウドスケジューラーの構築
 
 本機構の最終出力は公開Spotではなく、出典と品質状態を伴う公開前のSpot候補である。
 
-### 3.3 画像収集の後続設計
+### 3.3 Wikimedia Commons画像収集
 
-画像収集は初期版の対象外を維持し、表示はプレースホルダへフォールバックする。後続フェーズで実装する場合は、任意Webサイトの画像URLをそのまま保存・ホットリンクせず、Wikimedia Commons等の再利用条件と帰属を確認できるSourceだけを対象とする。
+初期画像SourceはWikimedia Commonsに限定する。任意Webサイトの画像URLは保存・ホットリンクせず、CC0、Public Domain、CC BY、CC BY-SAのうち、作者、ライセンス名・URL、原典ページを機械確認できる画像だけを取得する。NC、ND、GFDL単独、権利不明、帰属情報欠落は除外する。
 
-後続のCanonical境界では、Spot本体と分離した `spot_media` 相当の構造に、`spot_id`、自前オブジェクトストレージの保存URL、原典URL、ライセンス状態・名称・URL、帰属文、確認日時、代替テキスト、代表画像フラグを保持する。`license_status=verified` かつ画像保存・再配布を許可するSourceだけを公開候補とし、削除・利用条件変更をSourceから追跡できることを実装開始条件とする。
+Spot本体と分離した `spot_media` に、Canonical Spotまたは解決済みEntity、MinIO上の原典・WebP派生画像、原典URL、ライセンス、帰属文、確認日時、hash、寸法、容量、代表画像状態を保持する。Spotごとに候補メタデータを最大3件保存し、名称類似度80%以上かつ画像座標がSpotから2km以内の候補1件だけを自動採用する。それ以外は `review_required` とし、バイナリを保存しない。
 
-公開APIの `hero_image` は任意項目とし、iOSは画像欠損・通信失敗・採用取消時に同じプレースホルダへ戻る。画像バイナリ保存先、変換サイズ、費用上限、キャッシュ・削除SLA、帰属表示位置をADRで承認するまで収集を有効化しない。
+原典は20MB以下、派生画像は長辺1600px、WebP品質80を初期値とする。同一hashは再利用し、月次確認で原典revisionや利用条件が変わらなければ再取得しない。採用取消または利用条件変更時は即時に `suspended` とし、原典・派生画像を24時間以内に削除する。
+
+公開APIの `hero_image` とiOS表示・帰属表示は本版の対象外とし、画像欠損時は既存プレースホルダを維持する。
 
 ## 4. 設計原則
 
@@ -989,6 +991,19 @@ sources:
 10. 福岡市約100件でE2E、再開、費用、品質を測定する。
 11. 九州外を含む全国地域fixtureで地域切替を回帰試験する。
 12. 大量・定期取得が必要になった時点で `osm_pbf` を実装する。
+13. Wikimedia Commons画像候補、権利判定、MinIO保存、監査・再開CLIを実装し、100件で成立性を検証する。
+
+## 19.1 画像収集CLI
+
+```bash
+python -m collection_worker media collect --target published,ready,review_required --limit 100 --dry-run
+python -m collection_worker media collect --target published,ready,review_required --limit 100
+python -m collection_worker media resume <run_id> --failed-only
+python -m collection_worker media audit --run-id <run_id>
+python -m collection_worker media export --run-id <run_id>
+```
+
+`--limit` は取得画像数ではなく処理対象Spot数である。候補なし、権利条件不一致、レビュー待ちも処理件数へ含める。画像Runは通常のCollection Runから独立させ、失敗時もSpotおよび通常収集結果を変更しない。
 
 ## 20. 要件トレーサビリティ
 

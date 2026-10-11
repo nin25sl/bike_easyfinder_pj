@@ -1,6 +1,7 @@
 ---
 title: 指定時間推薦・地図改善 v1 実装タスク
 published: 2026-10-10
+updated: 2026-10-10
 description: 指定時間に近い推薦、提案・詳細画面の地図、現在地表示を改善する作業記録
 tags: [mvp, recommendation, map, task, SC]
 category: tasks

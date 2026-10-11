@@ -97,7 +97,7 @@ Appleは、ローカルホストへの直接unicast接続を含め、LANを使�
 
 追加をリポジトリへ反映する場合は、実装変更としてCodexへ依頼する。手元だけで追加した場合も、`xcodegen generate`後の生成物ではなく、上記の元`Info.plist`を編集する。
 
-### 4.3 Bundle IDとWeatherKit
+### 4.3 Bundle IDとWeatherKit(必要であれば確認方法をAIに確認)
 
 現行Bundle IDは`com.bikeeasyfinder.app`、WeatherKit entitlementは有効である。Xcodeの署名エラーを避けるため、次を確認する。
 

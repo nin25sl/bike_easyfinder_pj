@@ -15,6 +15,7 @@ from collection_worker.db import (
 from collection_worker.errors import ConfigurationError
 from collection_worker.exporter import export_run
 from collection_worker.logging import configure_logging
+from collection_worker.media import audit_media, collect_media, export_media, resume_media
 from collection_worker.pipeline import collect as run_collection
 from collection_worker.pipeline import collect_all as run_collection_batch
 from collection_worker.pipeline import resume as resume_collection
@@ -28,10 +29,12 @@ db_app = typer.Typer(help="Database operations")
 regions_app = typer.Typer(help="Administrative-region operations")
 runs_app = typer.Typer(help="Collection-run operations")
 batches_app = typer.Typer(help="Collection-batch operations")
+media_app = typer.Typer(help="Licensed Spot image collection operations")
 app.add_typer(db_app, name="db")
 app.add_typer(regions_app, name="regions")
 app.add_typer(runs_app, name="runs")
 app.add_typer(batches_app, name="batches")
+app.add_typer(media_app, name="media")
 
 
 def _print(payload: object) -> None:
@@ -202,5 +205,86 @@ def export(
         settings = load_settings(config)
         paths = export_run(create_db_engine(settings), run_id, settings.output_dir, output_format, status, view)
         _print({"status": "completed", "files": [str(path) for path in paths]})
+    except Exception as exc:
+        _fail(exc)
+
+
+@media_app.command("collect")
+def media_collect(
+    target: Annotated[str, typer.Option("--target")] = "published,ready,review_required",
+    source: Annotated[str, typer.Option("--source")] = "wikimedia_commons",
+    limit: Annotated[int | None, typer.Option("--limit", min=1)] = None,
+    spot_id: Annotated[list[str] | None, typer.Option("--spot-id")] = None,
+    dry_run: Annotated[bool, typer.Option("--dry-run")] = False,
+    config: Annotated[Path | None, typer.Option("--config")] = None,
+) -> None:
+    """Collect reusable Wikimedia Commons images for existing Spots."""
+    try:
+        if source != "wikimedia_commons":
+            raise ConfigurationError("Only --source wikimedia_commons is supported")
+        statuses = [value.strip() for value in target.split(",") if value.strip()]
+        settings = load_settings(config)
+        result = collect_media(
+            create_db_engine(settings), settings, statuses, limit,
+            dry_run=dry_run, ids=spot_id,
+        )
+        _print(result)
+        if result.get("status") in {"partial", "failed"}:
+            raise typer.Exit(code=2)
+    except typer.Exit:
+        raise
+    except Exception as exc:
+        _fail(exc)
+
+
+@media_app.command("resume")
+def media_resume(
+    run_id: str,
+    failed_only: Annotated[bool, typer.Option("--failed-only")] = True,
+    config: Annotated[Path | None, typer.Option("--config")] = None,
+) -> None:
+    """Resume failed items in an image collection run."""
+    try:
+        if not failed_only:
+            raise ConfigurationError("Only --failed-only resume is supported")
+        settings = load_settings(config)
+        result = resume_media(create_db_engine(settings), settings, run_id)
+        _print(result)
+        if result.get("status") in {"partial", "failed"}:
+            raise typer.Exit(code=2)
+    except typer.Exit:
+        raise
+    except Exception as exc:
+        _fail(exc)
+
+
+@media_app.command("audit")
+def media_audit(
+    run_id: Annotated[str, typer.Option("--run-id")],
+    config: Annotated[Path | None, typer.Option("--config")] = None,
+) -> None:
+    """Check that ready images have complete license, attribution, and storage metadata."""
+    try:
+        settings = load_settings(config)
+        result = audit_media(create_db_engine(settings), run_id)
+        _print(result)
+        if not result["passed"]:
+            raise typer.Exit(code=2)
+    except typer.Exit:
+        raise
+    except Exception as exc:
+        _fail(exc)
+
+
+@media_app.command("export")
+def media_export(
+    run_id: Annotated[str, typer.Option("--run-id")],
+    config: Annotated[Path | None, typer.Option("--config")] = None,
+) -> None:
+    """Export an auditable JSONL manifest for an image collection run."""
+    try:
+        settings = load_settings(config)
+        path = export_media(create_db_engine(settings), run_id, settings.output_dir)
+        _print({"status": "completed", "file": str(path)})
     except Exception as exc:
         _fail(exc)

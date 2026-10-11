@@ -1,6 +1,7 @@
 ---
 title: 指定時間推薦・地図改善 v1 テストエビデンス
 published: 2026-10-10
+updated: 2026-10-10
 description: 指定時間推薦とiOS地図改善の自動テスト結果および実機確認待ち項目
 tags: [mvp, recommendation, map, test-evidence, handover, SC]
 category: Handover
@@ -11,9 +12,9 @@ draft: false
 
 ## 対象
 
-- Backendの希望所要時間事前選別、±15分判定、段階拡張、警告、決定的順位
+- Backendの希望所要時間事前選別、±15分判定、±15分境界、段階拡張、完全0件、警告、決定的順位
 - iOSの警告デコード・表示、Mock時間窓、提案画面の目的地地図
-- iOS詳細画面の現在地再取得、現在地・目的地表示、取得失敗時フォールバック
+- iOS詳細画面の現在地再取得、現在地・目的地表示、取得失敗時フォールバック、地図カメラ範囲
 
 ## 自動テスト結果
 
@@ -21,19 +22,19 @@ draft: false
 
 - 実施日: 2026-10-10
 - 環境: Windows、Python仮想環境
-- コマンド: `.\.venv\Scripts\python.exe -m pytest backend\tests --basetemp .pytest-tmp-backend-3`
-- 結果: **16 passed、1 skipped**
+- コマンド: `.\.venv\Scripts\python.exe -m pytest backend\tests --basetemp .pytest-tmp-backend-duration`
+- 結果: **20 passed、1 skipped**
 - 補足: skipはPostGIS結合試験。Starlette非推奨警告とiCloud配下のpytest cache書込警告があるが、試験結果には影響しない。
 
 ### Lint
 
 - コマンド: `.\.venv\Scripts\python.exe -m ruff check backend\src\bike_easyfinder_api\recommendation.py backend\tests\test_recommendation.py backend\tests\test_api.py`
 - 結果: **変更対象の違反0件**
-- IDE診断: 変更対象のエラー0件
 
 ### iOS
 
 - `SearchViewModelTests` に警告保持、`MockRecommendationServiceTests` に±15分と段階拡張のケースを追加した。
+- `MapCameraFittingTests` に目的地のみと現在地・目的地のカメラ範囲を追加した。
 - Swift 5.9／iOS 17 APIとの整合、protocol実装・呼出箇所、テスト型を静的レビューし、コンパイルブロッカーは検出されなかった。
 - 現在の実行環境がWindowsのため、Xcodeによるビルド・単体テストは未実施。
 

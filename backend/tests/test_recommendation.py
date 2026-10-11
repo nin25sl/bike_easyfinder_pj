@@ -6,6 +6,7 @@ from bike_easyfinder_api.providers import ApproximateRouteProvider
 from bike_easyfinder_api.recommendation import (
     RecommendationEngine,
     Spot,
+    _approximate_total_minutes,
     search_radius_km,
 )
 
@@ -136,4 +137,29 @@ def test_preselection_is_not_limited_to_first_ten_nearby_spots() -> None:
     )
 
     assert [candidate.spot_id for candidate in response.candidates] == [target_fit.id]
+
+
+def test_time_window_boundary_includes_exactly_fifteen_minutes() -> None:
+    engine = RecommendationEngine(ApproximateRouteProvider(), "mvp-1.2", "test")
+    baseline = make_spot(1, "coast", ("sea",), stay_minutes=0)
+    overhead = _approximate_total_minutes(request().origin, baseline, False)
+    response = engine.recommend(
+        request(available_minutes=240, interests=["any"]),
+        [make_spot(1, "coast", ("sea",), stay_minutes=225 - overhead)],
+    )
+
+    assert len(response.candidates) == 1
+    assert abs(response.candidates[0].estimated_total_minutes - 240) == 15
+    assert not response.warnings
+
+
+def test_no_candidates_inside_maximum_window_returns_empty() -> None:
+    engine = RecommendationEngine(ApproximateRouteProvider(), "mvp-1.2", "test")
+    response = engine.recommend(
+        request(available_minutes=240, interests=["any"]),
+        [make_spot(1, "coast", ("sea",), stay_minutes=20)],
+    )
+
+    assert response.candidates == []
+    assert response.warnings == []
 

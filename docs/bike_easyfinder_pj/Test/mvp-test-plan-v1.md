@@ -118,12 +118,12 @@ Severity 1・2はリリース阻止とする。Severity 3は回避策、影響�
 
 | 対象 | 実装済み | 次に追加するもの |
 |---|---|---|
-| iOS推薦モック | 最大5件、時間内、興味一致、0件、不正座標、決定性 | 希望所要時間窓と段階拡張、固定7ケースをAPI fixtureへ移行 |
-| iOS ViewModel | 興味排他、loaded、empty、failed、古い結果の非表示 | loading中の二重送信、取消、永続化 |
-| iOSモデル | 合計時間、表示境界 | 15分余裕、帰着予想、鮮度 |
+| iOS推薦モック | 最大5件、希望所要時間窓、段階拡張、興味一致、0件、不正座標、決定性 | 固定7ケースをAPI fixtureへ移行 |
+| iOS ViewModel | 興味排他、loaded、empty、failed、警告保持、古い結果の非表示 | loading中の二重送信、取消、永続化 |
+| iOSモデル | 合計時間、15分余裕、地図カメラ範囲 | 帰着予想、鮮度 |
 | データ収集 | 設定、正規化、URL安全性、引用、Provider POC、Source検証 | PostGIS結合、品質判定、削除伝播 |
-| 公開API | 推薦、Contract、Problem、経路Provider | 希望所要時間窓、段階拡張、rate limit、性能 |
-| UI・E2E | S01〜S08基本フロー | S04目的地地図、S05現在地、権限拒否、優先シナリオ |
+| 公開API | 推薦、Contract、希望所要時間窓、段階拡張、0件、Problem、経路Provider | rate limit、性能 |
+| UI・E2E | S01〜S08基本フロー | S04目的地地図、S05現在地、権限拒否の実機確認 |
 
 ## 12. 実行コマンド
 

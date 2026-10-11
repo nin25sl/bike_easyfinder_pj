@@ -216,7 +216,7 @@ components:
       type: object
       required: [code, message]
       properties:
-        code: {type: string, enum: [PARTIAL_ROUTE_FAILURE, STALE_SPOT_DATA, HOURS_UNKNOWN, WEATHER_UNAVAILABLE, ROAD_INFORMATION_EXTERNAL]}
+        code: {type: string, enum: [PARTIAL_ROUTE_FAILURE, TIME_WINDOW_EXPANDED, STALE_SPOT_DATA, HOURS_UNKNOWN, WEATHER_UNAVAILABLE, ROAD_INFORMATION_EXTERNAL]}
         message: {type: string}
     InteractionBatch:
       type: object

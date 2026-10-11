@@ -20,7 +20,35 @@ openai:
   monthly_budget_jpy: 3000
   prompt_version: spot-collection-v1
 
+media:
+  endpoint_url: http://minio:9000
+  bucket: spot-media
+  access_key_env: MEDIA_ACCESS_KEY
+  secret_key_env: MEDIA_SECRET_KEY
+  max_candidates: 3
+  max_original_bytes: 20971520
+  derivative_max_edge: 1600
+  webp_quality: 80
+  auto_match_distance_meters: 2000
+  min_name_similarity: 0.8
+
 sources:
+  wikimedia_commons:
+    source_type: wikimedia_commons
+    approval_status: approved
+    license_status: verified
+    license_name: File-specific free license
+    terms_url: https://commons.wikimedia.org/wiki/Commons:Reusing_content_outside_Wikimedia
+    attribution_text: File-specific attribution required
+    raw_storage_policy: full_allowed
+    base_url: https://commons.wikimedia.org/w/api.php
+    rate_limit_per_minute: 30
+    request_timeout_seconds: 60
+    max_pages_per_run: 300
+    refresh_interval_days: 30
+    config:
+      user_agent: "BikeEasyFinder/0.1 (spot media collection; contact: mailto:nakamuback.s@gmail.com)"
+
   n03:
     source_type: n03
     approval_status: approved

@@ -44,6 +44,21 @@ class OpenAIConfig(BaseModel):
         return self
 
 
+class MediaConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    endpoint_url: str = "http://localhost:9000"
+    bucket: str = "spot-media"
+    access_key_env: str = "MEDIA_ACCESS_KEY"
+    secret_key_env: str = "MEDIA_SECRET_KEY"
+    max_candidates: int = Field(default=3, ge=1, le=10)
+    max_original_bytes: int = Field(default=20_971_520, gt=0)
+    derivative_max_edge: int = Field(default=1600, ge=320, le=4096)
+    webp_quality: int = Field(default=80, ge=1, le=100)
+    auto_match_distance_meters: int = Field(default=2000, gt=0)
+    min_name_similarity: float = Field(default=0.8, ge=0, le=1)
+
+
 class SourceConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -57,6 +72,7 @@ class SourceConfig(BaseModel):
         "touring_media",
         "openai_web_discovery",
         "manual_seed",
+        "wikimedia_commons",
     ]
     approval_status: Literal["pending_review", "approved", "suspended", "retired", "rejected"]
     license_status: Literal["verified", "restricted", "unknown", "prohibited"]
@@ -86,6 +102,7 @@ class Settings(BaseModel):
 
     collection: CollectionConfig
     openai: OpenAIConfig
+    media: MediaConfig = Field(default_factory=MediaConfig)
     sources: dict[str, SourceConfig]
     region_groups: dict[str, list[str]] = Field(default_factory=dict)
     profiles: dict[str, CollectionProfile] = Field(default_factory=dict)
@@ -97,6 +114,14 @@ class Settings(BaseModel):
     @property
     def openai_api_key(self) -> str | None:
         return os.getenv("OPENAI_API_KEY") or None
+
+    @property
+    def media_access_key(self) -> str:
+        return os.getenv(self.media.access_key_env, "bike_media")
+
+    @property
+    def media_secret_key(self) -> str:
+        return os.getenv(self.media.secret_key_env, "bike_media_local_only")
 
 
 def load_settings(path: str | Path | None = None) -> Settings:

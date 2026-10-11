@@ -11,20 +11,22 @@ from fastapi.testclient import TestClient
 
 
 class FakeRepository:
-    def __init__(self) -> None:
+    def __init__(self, stay_minutes: int = 97, name: str = "海岸展望所") -> None:
         self.deleted: list[UUID] = []
         self.events = 0
+        self.stay_minutes = stay_minutes
+        self.name = name
 
     def nearby_spots(self, origin: Coordinate, radius_km: float):
         return [
             Spot(
                 id=UUID("00000000-0000-0000-0000-000000000001"),
-                name="海岸展望所",
+                name=self.name,
                 summary="テスト候補",
                 category="coast",
                 tags=("sea", "scenic"),
                 coordinate=Coordinate(latitude=33.61, longitude=130.4),
-                stay_minutes=97,
+                stay_minutes=self.stay_minutes,
                 confidence=0.9,
                 popularity_score=5,
                 verified_at=datetime.now(UTC),
@@ -39,8 +41,8 @@ class FakeRepository:
         self.deleted.append(installation_id)
 
 
-def client_and_repository():
-    repository = FakeRepository()
+def client_and_repository(stay_minutes: int = 97, name: str = "海岸展望所"):
+    repository = FakeRepository(stay_minutes=stay_minutes, name=name)
     app = create_app(
         Settings(app_env="test", database_url="postgresql+psycopg://unused"),
         repository=repository,
@@ -64,6 +66,40 @@ def test_recommendation_endpoint() -> None:
     assert response.json()["candidates"][0]["name"] == "海岸展望所"
     assert abs(response.json()["candidates"][0]["estimated_total_minutes"] - 120) <= 15
     assert response.headers["x-request-id"]
+
+
+def test_recommendation_endpoint_expands_time_window() -> None:
+    client, _ = client_and_repository(stay_minutes=195, name="遠方海岸")
+    response = client.post(
+        "/v1/recommendations",
+        json={
+            "origin": {"latitude": 33.59, "longitude": 130.4},
+            "available_minutes": 240,
+            "interests": ["any"],
+            "allow_highway": False,
+        },
+    )
+    payload = response.json()
+    assert response.status_code == 200
+    assert payload["candidates"][0]["name"] == "遠方海岸"
+    assert payload["warnings"][0]["code"] == "TIME_WINDOW_EXPANDED"
+
+
+def test_recommendation_endpoint_returns_empty_outside_maximum_window() -> None:
+    client, _ = client_and_repository(stay_minutes=20)
+    response = client.post(
+        "/v1/recommendations",
+        json={
+            "origin": {"latitude": 33.59, "longitude": 130.4},
+            "available_minutes": 240,
+            "interests": ["any"],
+            "allow_highway": False,
+        },
+    )
+    payload = response.json()
+    assert response.status_code == 200
+    assert payload["candidates"] == []
+    assert payload["warnings"] == []
 
 
 def test_interactions_require_installation_headers() -> None:
